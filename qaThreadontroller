@@ -60,3 +60,68 @@ final class IndexAction
             ->withQueryString();
     }
 }
+
+ public function index(IndexRequest $request, IndexAction $action): View
+    {
+        $validated = $request->validated();
+
+        $threads = $action(
+            auth: $request->user(),
+            keyword: $validated['keyword'] ?? null,
+            status: $validated['status'] ?? null,
+            keyword: $validated['keyword'] ?? null,
+        );
+
+
+        return view('qa-thread.index', [
+            'threads' => $threads,
+            'certifications' => Certification::query()->orderBy('name')->get(),
+            'keyword' => $validated['keyword'] ?? '',
+            'certificationId' => $validated['certification_id'] ?? '',
+            'isPublished' => $validated['is_published'] ?? '',
+        ]);
+    }
+
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Requests\QaThread;
+
+use App\Models\QaThread;
+use Illuminate\Foundation\Http\FormRequest;
+
+/**
+ * 質問掲示板スレッド一覧フィルタ。
+ */
+class IndexRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()?->can('viewAny', QaThread::class) ?? false;
+    }
+
+    /**
+     * @return array<string, array<int, mixed>>
+     */
+    public function rules(): array
+    {
+        return [
+            'keyword' => ['nullable', 'string', 'max:100'],
+            'certification_id' => ['nullable', 'ulid', 'exists:certifications,id'],
+            'is_published' => ['nullable', 'in:0,1,true,false'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'keyword' => 'キーワード',
+            'certification_id' => '資格',
+            'is_published' => '公開状態',
+        ];
+    }
+}
