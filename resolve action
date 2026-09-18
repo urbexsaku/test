@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Exceptions;
+
+use App\Enums\QaThreadStatus;
+use DomainExceptionException;
+
+/**
+ * 質問スレッドの解決状態遷移制約に違反したアクションを実行しようとした場合の例外。
+ */
+
+final class QaThreadStatusTransitionException extends DomainException
+{
+    public static function forResolve(QaThreadStatus $currentStatus): self
+    {
+        return new self(
+            sprintf(
+                '未解決の質問スレッドのみ解決済みにできます。',
+                $currentStatus->value,
+            ),
+        );
+    }
+
+    public static function forUnresolve(QaThreadStatus $currentStatus): self
+    {
+        return new self(
+            sprintf(
+                '解決済みの質問スレッドのみ未解決にできます。',
+                $currentStatus->value,
+            ),
+        );
+    }
+}
