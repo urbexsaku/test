@@ -2,10 +2,76 @@
 
 declare(strict_types=1);
 
-namespace App\Exceptions;
+namespace App\UseCases\QaThread;
 
 use App\Enums\QaThreadStatus;
-use DomainExceptionException;
+use App\Exceptions\QaThread\QaThreadStatusTransitionException;
+use App\Models\QaThread;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * 質問スレッドを解決済みにするユースケース
+ */
+final class ResolveAction
+{
+    public function __invoke(QaThread $thread): QaThread
+    {
+        if ($thread->status !== QaThreadStatus::Open) {
+            throw QaThreadStatusTransitionException::forResolve($thread->status);
+        }
+
+        return DB::transaction(function () use ($thread) {
+            $thread->update([
+                'status' => QaThreadStatus::Resolved->value,
+                'resolved_at' => now(),
+            ]);
+
+            return $thread->fresh(['user', 'certification']);
+        });
+    }
+}
+
+<?php
+
+declare(strict_types=1);
+
+namespace App\UseCases\QaThread;
+
+use App\Enums\QaThreadStatus;
+use App\Exceptions\QaThread\QaThreadStatusTransitionException;
+use App\Models\QaThread;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * 質問スレッドを未解決に戻すユースケース
+ */
+final class UnresolveAction
+{
+    public function __invoke(QaThread $thread): QaThread
+    {
+        if ($thread->status !== QaThreadStatus::Resolved) {
+            throw QaThreadStatusTransitionException::forUnresolve($thread->status);
+        }
+
+        return DB::transaction(function () use ($thread) {
+            $thread->update([
+                'status' => QaThreadStatus::Open->value,
+                'resolved_at' => null,
+            ]);
+
+            return $thread->fresh(['user', 'certification']);
+        });
+    }
+}
+
+<?php
+
+declare(strict_types=1);
+
+namespace App\Exceptions\QaThread;
+
+use App\Enums\QaThreadStatus;
+use DomainException;
 
 /**
  * 質問スレッドの解決状態遷移制約に違反したアクションを実行しようとした場合の例外。
@@ -13,23 +79,15 @@ use DomainExceptionException;
 
 final class QaThreadStatusTransitionException extends DomainException
 {
-    public static function forResolve(QaThreadStatus $currentStatus): self
+    public static function forResolve(): self
     {
-        return new self(
-            sprintf(
-                '未解決の質問スレッドのみ解決済みにできます。',
-                $currentStatus->value,
-            ),
-        );
+        return new self('未解決の質問スレッドのみ解決済みにできます。');
     }
 
-    public static function forUnresolve(QaThreadStatus $currentStatus): self
+    public static function forUnresolve(): self
     {
-        return new self(
-            sprintf(
-                '解決済みの質問スレッドのみ未解決にできます。',
-                $currentStatus->value,
-            ),
-        );
+        return new self('解決済みの質問スレッドのみ未解決にできます。');
     }
 }
+
+
