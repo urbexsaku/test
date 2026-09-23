@@ -42,8 +42,8 @@
 	ファイル名	フォーム	ルール	ルール	attributes																					
 	QaThread/IndexRequest	keyword	任意、文字列、最大100文字	nullable, string, max:100	キーワード																					
 		certification_id	任意、ulid、存在するid	nullable, ulid, exists	資格																					
-		status	任意、未解決・解決済を指定可能	nullable, in:open, resolved	解決状態																					
-	QaThread/IStoreRequest	certification_id	必須、ulid、存在するid	required, ulid, exists	資格																					
+		status	任意、未解決・解決済を指定可能	nullable, in:unresolved, resolved	解決状態																					
+	QaThread/StoreRequest	certification_id	必須、ulid、存在するid	required, ulid, exists	資格																					
 		title	必須、文字列、最大200文字、全角空白・半角空白のみの入力は不可	required, string, max:200, regex:/^(?![ 　]+$).+$/u	タイトル																					
 		body	必須、文字列、最大5000文字、全角空白・半角空白のみの入力は不可	required, string, max:5000, regex:/^(?![ 　]+$).+$/u	本文																					
 	QaThread/IUpdateRequest	title	必須、文字列、最大200文字、全角空白・半角空白のみの入力は不可	required, string, max:200, regex:/^(?![ 　]+$).+$/u	タイトル																					
