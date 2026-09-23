@@ -498,7 +498,7 @@ Route::middleware(['auth', 'role:student,coach', 'active-learning'])
             Route::get('{thread}/replies/{reply}/edit', [QaReplyController::class, 'edit'])->name('replies.edit');
             Route::patch('{thread}/replies/{reply}', [QaReplyController::class, 'update'])->name('replies.update');
             Route::delete('{thread}/replies/{reply}', [QaReplyController::class, 'destroy'])->name('replies.destroy');
-        }):
+        });
     });
 
 // ========================================
