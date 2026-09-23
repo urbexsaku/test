@@ -1,60 +1,92 @@
-前回のレスポンスが `ResolveActionTest` の途中で切れていました。全テストを **テストファイル・テストメソッド名・期待挙動** に加えて **実行内容（テスト内でやること）** を含めた1つの表として、最後まで完成させます。
+前回のHTTPテスト表は最後まで出力できていたので、ここでは **全テスト（Unit + Feature）を、ファイル・メソッド名・実行内容・期待挙動の4列で最後まで欠けなく** まとめた完全版を提示します。
+
+## Unit テスト
 
 | テストファイル | テストメソッド名 | 実行内容 | 期待挙動 |
 |---|---|---|---|
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_all_roles_can_view_any_thread_list | admin/coach/studentを作成し各々に`viewAny()`を呼ぶ | 全ロールで true |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_admin_can_view_thread_for_any_certification_status | Draft/Published/Archived各資格のスレッドをadminで`view()` | すべて true |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_student_can_view_published_thread | 公開資格スレッドをstudentで`view()` | true |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_student_cannot_view_draft_or_archived_thread | Draft/Archived資格スレッドをstudentで`view()` | false |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_assigned_coach_can_view_published_thread | 資格に現役担当coachをattachし公開スレッドを`view()` | true |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_unassigned_coach_cannot_view_thread | 担当割当なしcoachで`view()` | false |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_assigned_coach_cannot_view_archived_thread | 担当coach×Archived資格スレッドを`view()` | false |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_student_can_create_for_published_certification | student+公開資格を`create()`に渡す | true |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_student_cannot_create_for_non_published_certification | student+Draft/Archived資格を`create()` | false |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_coach_and_admin_cannot_create_thread | coach/adminで`create()` | false |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_owner_student_can_update_published_thread | 投稿者本人+公開スレッドを`update()` | true |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_other_student_cannot_update_thread | 別studentで`update()` | false |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_student_cannot_update_non_published_thread | 自分のDraft/Archivedスレッドを`update()` | false |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_owner_can_delete_thread_without_replies | 投稿者本人+回答0件スレッドを`delete()` | true |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_owner_cannot_delete_thread_with_replies | 投稿者本人+回答1件付きスレッドを`delete()` | false |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_admin_can_delete_thread_with_replies | admin+回答付きスレッドを`delete()` | true |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_coach_cannot_delete_thread | coachで`delete()` | false |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_owner_can_resolve_and_unresolve_published_thread | 投稿者本人+公開スレッドで`resolve()`/`unresolve()` | 両方 true |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_other_student_cannot_resolve_or_unresolve_thread | 別studentで`resolve()`/`unresolve()` | 両方 false |
-| tests/Unit/Policies/QaThreadPolicyTest.php | test_admin_and_coach_cannot_resolve_or_unresolve_thread | admin/coachで`resolve()`/`unresolve()` | すべて false |
-| tests/Unit/Policies/QaReplyPolicyTest.php | test_student_can_create_reply_for_published_thread | student+公開スレッドを`create()` | true |
-| tests/Unit/Policies/QaReplyPolicyTest.php | test_student_cannot_create_reply_for_non_published_thread | student+Draft/Archivedスレッドを`create()` | false |
-| tests/Unit/Policies/QaReplyPolicyTest.php | test_assigned_coach_can_create_reply_for_published_thread | 現役担当coach+公開スレッドを`create()` | true |
-| tests/Unit/Policies/QaReplyPolicyTest.php | test_unassigned_coach_cannot_create_reply | 担当外coachで`create()` | false |
-| tests/Unit/Policies/QaReplyPolicyTest.php | test_admin_cannot_create_reply | adminで`create()` | false |
-| tests/Unit/Policies/QaReplyPolicyTest.php | test_reply_author_student_can_update_and_delete | 回答者student本人で`update()`/`delete()` | 両方 true |
-| tests/Unit/Policies/QaReplyPolicyTest.php | test_reply_author_coach_can_update_and_delete | 現役担当coach本人の回答で`update()`/`delete()` | 両方 true |
-| tests/Unit/Policies/QaReplyPolicyTest.php | test_other_student_cannot_update_or_delete_reply | 別studentで`update()`/`delete()` | 両方 false |
-| tests/Unit/Policies/QaReplyPolicyTest.php | test_unassigned_coach_cannot_update_or_delete_own_old_reply | 担当解除後coach本人の回答で`update()`/`delete()` | 両方 false |
-| tests/Unit/Policies/QaReplyPolicyTest.php | test_admin_can_delete_but_cannot_update_reply | adminで`delete()`と`update()` | delete=true / update=false |
-| tests/Unit/Policies/QaReplyPolicyTest.php | test_reply_author_cannot_update_or_delete_after_certification_archived | 資格をPublished→Archivedにして本人で`update()`/`delete()` | 両方 false |
-| tests/Unit/Models/QaThreadTest.php | test_status_is_cast_to_qa_thread_status_enum | スレッドを作成し`$thread->status`の型を確認 | `QaThreadStatus`インスタンス |
-| tests/Unit/Models/QaThreadTest.php | test_resolved_at_is_cast_to_datetime | `resolved_at`付きスレッドで型確認 | `Carbon`等の日時型 |
-| tests/Unit/Models/QaThreadTest.php | test_by_status_filters_unresolved_as_open | open/resolved混在で`byStatus('unresolved')` | openのみ返る |
-| tests/Unit/Models/QaThreadTest.php | test_by_status_filters_resolved | `byStatus('resolved')`を実行 | resolvedのみ返る |
-| tests/Unit/Models/QaThreadTest.php | test_keyword_search_matches_title | タイトルに検索語を含むスレッドで`keyword()` | 該当スレッドが返る |
-| tests/Unit/Models/QaThreadTest.php | test_keyword_search_matches_body | 本文に検索語を含むスレッドで`keyword()` | 該当スレッドが返る |
-| tests/Unit/Models/QaThreadTest.php | test_keyword_search_matches_reply_body | 回答本文に検索語を含む構成で`keyword()` | 親スレッドが返る |
-| tests/Unit/Models/QaThreadTest.php | test_keyword_search_does_not_return_unmatched_thread | 検索語を含まないスレッドを併存させ`keyword()` | 未一致は返らない |
-| tests/Unit/Models/QaReplyTest.php | test_reply_belongs_to_thread | 回答から`thread`をロード | 親スレッドを返す |
-| tests/Unit/Models/QaReplyTest.php | test_reply_belongs_to_user | 回答から`user`をロード | 回答者を返す |
-| tests/Unit/Models/QaReplyTest.php | test_ordered_scope_orders_by_created_at_ascending | created_atをずらした複数回答で`ordered()` | 古い順で返る |
-| tests/Feature/UseCases/QaThread/IndexActionTest.php | test_admin_receives_threads_for_all_certification_statuses | 全ステータスの資格スレッドを用意しadminでAction実行 | 全ステータス分が含まれる |
-| tests/Feature/UseCases/QaThread/IndexActionTest.php | test_student_receives_only_published_threads | 公開/非公開スレッドを用意しstudentで実行 | 公開分のみ |
-| tests/Feature/UseCases/QaThread/IndexActionTest.php | test_coach_receives_only_assigned_published_threads | 担当/担当外・公開/非公開を用意しcoachで実行 | 担当かつ公開分のみ |
-| tests/Feature/UseCases/QaThread/IndexActionTest.php | test_index_filters_by_certification | `certificationId`指定で実行 | 指定資格のみ |
-| tests/Feature/UseCases/QaThread/IndexActionTest.php | test_index_filters_by_status | `unresolved`/`resolved`指定で実行 | 状態に一致するもののみ |
-| tests/Feature/UseCases/QaThread/IndexActionTest.php | test_index_filters_by_keyword_in_title_body_and_reply | タイトル/本文/回答本文に語を分散し`keyword`指定 | 3経路すべてヒット |
-| tests/Feature/UseCases/QaThread/IndexActionTest.php | test_index_orders_by_newest_created_at_first | created_atをずらして実行 | created_at降順 |
-| tests/Feature/UseCases/QaThread/IndexActionTest.php | test_index_paginates_twenty_threads_per_page | 21件作成し1ページ目を取得 | perPage=20、次ページ1件 |
-| tests/Feature/UseCases/QaThread/IndexActionTest.php | test_index_includes_user_certification_and_replies_count | 実行後に取得要素の関連を確認 | user/certificationロード済・replies_count設定済 |
-| tests/Feature/UseCases/QaThread/ShowActionTest.php | test_show_loads_thread_user_and_certification | スレッドでActionを実行 | user/certificationロード済 |
-| tests/Feature/UseCases/QaThread/ShowActionTest.php | test_show_loads_replies_with_authors | 回答付きスレッドで実行 | repliesと各reply->userロード済 |
-| tests/Feature/UseCases/QaThread/ShowActionTest.php | test_show_loads_replies_count | 回答2件付きで実行 | `replies_count`が2 |
-| tests/Feature/UseCases/QaThread/ShowActionTest.php | test_show_orders_replies_oldest_first | created_atをずらした回答で実行 | 回答が古い順 |
-| tests/Feature/UseCases/QaThread/StoreActionTest.php | test_creates_thread_for_authenticated_student | student+validated配列でAction実行しDB確認 | user_id/certification_id/title/bodyでレコード作
+| tests/Unit/Policies/QaThreadPolicyTest.php | test_all_roles_can_view_any_thread_list | admin/coach/studentで`viewAny()` | 全ロール true |
+| 〃 | test_admin_can_view_thread_for_any_certification_status | Draft/Published/Archived各スレッドをadminで`view()` | すべて true |
+| 〃 | test_student_can_view_published_thread | 公開資格スレッドをstudentで`view()` | true |
+| 〃 | test_student_cannot_view_draft_or_archived_thread | 非公開資格スレッドをstudentで`view()` | false |
+| 〃 | test_assigned_coach_can_view_published_thread | 現役担当coach×公開で`view()` | true |
+| 〃 | test_unassigned_coach_cannot_view_thread | 担当外coachで`view()` | false |
+| 〃 | test_assigned_coach_cannot_view_archived_thread | 担当coach×Archivedで`view()` | false |
+| 〃 | test_student_can_create_for_published_certification | student+公開資格を`create()` | true |
+| 〃 | test_student_cannot_create_for_non_published_certification | student+Draft/Archivedを`create()` | false |
+| 〃 | test_coach_and_admin_cannot_create_thread | coach/adminで`create()` | false |
+| 〃 | test_owner_student_can_update_published_thread | 投稿者本人+公開で`update()` | true |
+| 〃 | test_other_student_cannot_update_thread | 他studentで`update()` | false |
+| 〃 | test_student_cannot_update_non_published_thread | 自分のDraft/Archivedで`update()` | false |
+| 〃 | test_owner_can_delete_thread_without_replies | 本人+回答0件で`delete()` | true |
+| 〃 | test_owner_cannot_delete_thread_with_replies | 本人+回答ありで`delete()` | false |
+| 〃 | test_admin_can_delete_thread_with_replies | admin+回答ありで`delete()` | true |
+| 〃 | test_coach_cannot_delete_thread | coachで`delete()` | false |
+| 〃 | test_owner_can_resolve_and_unresolve_published_thread | 本人+公開で`resolve()`/`unresolve()` | 両方 true |
+| 〃 | test_other_student_cannot_resolve_or_unresolve_thread | 他studentで両操作 | 両方 false |
+| 〃 | test_admin_and_coach_cannot_resolve_or_unresolve_thread | admin/coachで両操作 | すべて false |
+| tests/Unit/Policies/QaReplyPolicyTest.php | test_student_can_create_reply_for_published_thread | student+公開スレッドで`create()` | true |
+| 〃 | test_student_cannot_create_reply_for_non_published_thread | student+Draft/Archivedで`create()` | false |
+| 〃 | test_assigned_coach_can_create_reply_for_published_thread | 現役担当coachで`create()` | true |
+| 〃 | test_unassigned_coach_cannot_create_reply | 担当外coachで`create()` | false |
+| 〃 | test_admin_cannot_create_reply | adminで`create()` | false |
+| 〃 | test_reply_author_student_can_update_and_delete | student本人で`update()`/`delete()` | 両方 true |
+| 〃 | test_reply_author_coach_can_update_and_delete | 現役担当coach本人で両操作 | 両方 true |
+| 〃 | test_other_student_cannot_update_or_delete_reply | 他studentで両操作 | 両方 false |
+| 〃 | test_unassigned_coach_cannot_update_or_delete_own_old_reply | 担当解除後coach本人で両操作 | 両方 false |
+| 〃 | test_admin_can_delete_but_cannot_update_reply | adminで`delete()`と`update()` | delete=true/update=false |
+| 〃 | test_reply_author_cannot_update_or_delete_after_certification_archived | Published→Archived化後に本人で両操作 | 両方 false |
+| tests/Unit/Models/QaThreadTest.php | test_status_is_cast_to_qa_thread_status_enum | スレッド作成し`status`の型確認 | `QaThreadStatus`インスタンス |
+| 〃 | test_resolved_at_is_cast_to_datetime | `resolved_at`付きで型確認 | 日時型 |
+| 〃 | test_by_status_filters_unresolved_as_open | open/resolved混在で`byStatus('unresolved')` | openのみ |
+| 〃 | test_by_status_filters_resolved | `byStatus('resolved')` | resolvedのみ |
+| 〃 | test_keyword_search_matches_title | タイトル一致で`keyword()` | 該当返る |
+| 〃 | test_keyword_search_matches_body | 本文一致で`keyword()` | 該当返る |
+| 〃 | test_keyword_search_matches_reply_body | 回答本文一致で`keyword()` | 親スレッド返る |
+| 〃 | test_keyword_search_does_not_return_unmatched_thread | 未一致を併存させ`keyword()` | 未一致は返らない |
+| tests/Unit/Models/QaReplyTest.php | test_reply_belongs_to_thread | `thread`をロード | 親スレッド返る |
+| 〃 | test_reply_belongs_to_user | `user`をロード | 回答者返る |
+| 〃 | test_ordered_scope_orders_by_created_at_ascending | created_atをずらし`ordered()` | 古い順 |
+
+## Feature（UseCases）テスト
+
+| テストファイル | テストメソッド名 | 実行内容 | 期待挙動 |
+|---|---|---|---|
+| tests/Feature/UseCases/QaThread/IndexActionTest.php | test_admin_receives_threads_for_all_certification_statuses | 全ステータス資格スレッドをadminで実行 | 全ステータス分含む |
+| 〃 | test_student_receives_only_published_threads | 公開/非公開を用意しstudentで実行 | 公開分のみ |
+| 〃 | test_coach_receives_only_assigned_published_threads | 担当/担当外・公開/非公開でcoach実行 | 担当かつ公開のみ |
+| 〃 | test_index_filters_by_certification | `certificationId`指定 | 指定資格のみ |
+| 〃 | test_index_filters_by_status | `unresolved`/`resolved`指定 | 状態一致のみ |
+| 〃 | test_index_filters_by_keyword_in_title_body_and_reply | 3経路に語を分散し`keyword`指定 | すべてヒット |
+| 〃 | test_index_orders_by_newest_created_at_first | created_atをずらし実行 | created_at降順 |
+| 〃 | test_index_paginates_twenty_threads_per_page | 21件作成し1ページ目取得 | 20件+次ページ1件 |
+| 〃 | test_index_includes_user_certification_and_replies_count | 実行後に関連確認 | user/certificationロード済・replies_count設定済 |
+| tests/Feature/UseCases/QaThread/ShowActionTest.php | test_show_loads_thread_user_and_certification | スレッドで実行 | user/certificationロード済 |
+| 〃 | test_show_loads_replies_with_authors | 回答付きで実行 | repliesと各reply->userロード済 |
+| 〃 | test_show_loads_replies_count | 回答2件で実行 | `replies_count`=2 |
+| 〃 | test_show_orders_replies_oldest_first | created_atをずらした回答で実行 | 回答が古い順 |
+| tests/Feature/UseCases/QaThread/StoreActionTest.php | test_creates_thread_for_authenticated_student | student+validated配列で実行しDB確認 | user_id/certification_id/title/bodyで作成 |
+| 〃 | test_new_thread_defaults_to_open_and_null_resolved_at | 実行後の初期値確認 | status=open・resolved_at=null |
+| tests/Feature/UseCases/QaThread/UpdateActionTest.php | test_updates_title_and_body | 更新配列で実行 | title/body更新 |
+| 〃 | test_does_not_change_certification_id | 更新後に資格ID確認 | certification_id不変 |
+| 〃 | test_does_not_change_status_or_resolved_at | 更新後に状態確認 | status/resolved_at不変 |
+| tests/Feature/UseCases/QaThread/DestroyActionTest.php | test_deletes_thread_without_replies | 回答0件スレッドで実行 | qa_threadsから削除 |
+| 〃 | test_deletes_replies_before_deleting_thread | 回答付きで実行 | 配下回答も削除される |
+| 〃 | test_deletes_only_replies_of_target_thread | 他スレッド回答も用意し実行 | 他スレッド回答は残る |
+| tests/Feature/UseCases/QaThread/ResolveActionTest.php | test_resolve_changes_open_to_resolved_and_sets_resolved_at | openスレッドで`ResolveAction`実行 | resolved・resolved_at非null |
+| 〃 | test_unresolve_changes_resolved_to_open_and_clears_resolved_at | resolvedスレッドで`UnresolveAction`実行 | open・resolved_at=null |
+| 〃 | test_resolve_throws_for_already_resolved_thread | resolvedスレッドで`ResolveAction`実行 | `QaThreadStatusTransitionException` |
+| 〃 | test_unresolve_throws_for_open_thread | openスレッドで`UnresolveAction`実行 | 同例外 |
+| tests/Feature/UseCases/QaReply/StoreActionTest.php | test_creates_reply_for_thread_and_author | thread+author+bodyで実行しDB確認 | qa_thread_id/user_id/bodyで作成 |
+| 〃 | test_does_not_modify_thread_status_or_resolved_at | 回答作成後に親スレッド確認 | 親スレッドの状態不変 |
+| tests/Feature/UseCases/QaReply/UpdateActionTest.php | test_updates_reply_body | 更新配列で実行 | body更新 |
+| 〃 | test_keeps_thread_id_and_user_id | 更新後に確認 | qa_thread_id/user_id不変 |
+| tests/Feature/UseCases/QaReply/DestroyActionTest.php | test_deletes_reply | 回答で実行 | 対象回答のみ物理削除 |
+| 〃 | test_does_not_delete_thread | 削除後に親確認 | 親スレッドは残る |
+
+## Feature（HTTP）テスト
+
+| テストファイル | テストメソッド名 | 実行内容 | 期待挙動 |
+|---|---|---|---|
+| tests/Feature/Http/QaBoard/QaThreadControllerTest.php | test_student_can_view_published_thread_index | studentで`GET qa-board.index` | 200・公開分のみView |
+| 〃 | test_assigned_coach_can_view_assigned_thread_index | 担当割当後coachで`GET qa-board.index` | 200・担当公開分のみ |
+| 〃 | test_unassigned_coach_cannot_
