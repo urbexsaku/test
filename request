@@ -1,0 +1,14 @@
+public function authorize(): bool
+    {
+        $certificationId = $this->input('certification_id');
+        if (! is_string($certificationId)) {
+            return false;
+        }
+
+        $certification = Certification::find($certificationId);
+        if ($certification === null) {
+            return false;
+        }
+
+        return $this->user()?->can('create', [QaThread::class, $certification]) ?? false;
+    }
