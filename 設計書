@@ -28,7 +28,7 @@
 		title	varchar(200)		〇																					
 		body	text		〇																					
 		status	varchar(20)		〇		QaThreadStatus Enumで管理。Open：未解決、Resolved：解決済み。デフォルト：open																			
-		resolved_at	timestamp																							
+		resolved_at	timestamp				解決済みに変更した日時。status = openの時はnull																			
 		created_at	timestamp																							
 		updated_at	timestamp							　																
 	qa_replies	id	char(26)	〇	〇		ULID																			
