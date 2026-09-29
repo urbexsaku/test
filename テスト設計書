@@ -1,5 +1,5 @@
 区分	ファイル	テスト内容（日本語）	テストメソッド名	実行内容	期待結果																						
-Unit	tests/Unit/Enums/QaThreadStatusTest.php	Enumが未解決・解決済みの2値を持つこと	test_enum_lists_two_status_values	QaThreadStatus::cases()の値を確認	open、resolved																						
+Unit	tests/Unit/Enums/QaThreadStatusTest.php	Enumが未解決・解決済の2値を持つこと	test_enum_lists_two_status_values	QaThreadStatus::cases()の値を確認	open、resolved																						
 Unit	tests/Unit/Enums/QaThreadStatusTest.php	日本語ラベルを返すこと	test_japanese_labels	Open->label()とResolved->label()を確認	未解決／解決済																						
 Unit	tests/Unit/Http/Requests/QaThread/IndexRequestTest.php	フィルタ未指定で通過すること	test_passes_with_empty_filters	空配列をrules()でValidator検証	passes																						
 Unit	tests/Unit/Http/Requests/QaThread/IndexRequestTest.php	有効な状態フィルタを許可すること	test_passes_with_valid_status	status=unresolved/resolvedを検証	passes																						
@@ -7,9 +7,9 @@ Unit	tests/Unit/Http/Requests/QaThread/IndexRequestTest.php	不正な状態フ�
 Unit	tests/Unit/Http/Requests/QaThread/IndexRequestTest.php	keyword最大長超過を拒否すること	test_fails_when_keyword_exceeds_max	101文字keywordを検証	keywordにエラー																						
 Unit	tests/Unit/Http/Requests/QaThread/IndexRequestTest.php	存在しない資格IDを拒否すること	test_fails_when_certification_id_not_exists	実在しないULIDを検証	certification_idにエラー																						
 Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	正常入力で通過しスレッドを作成できること	test_validation_passes_with_valid_payload	Student+Published資格でPOST	302・DB登録																						
-Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	必須・文字数制限を検証すること	test_validation_fails	title空/201文字、body空/5001文字でpostJson	422・該当フィールドにエラー																						
+Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	必須・文字数制限を検証すること	test_validation_fails	certification_id空、title空/201文字、body空/5001文字でpostJson	422・該当フィールドにエラー																						
 Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	全角・半角空白だけのタイトル・本文を拒否すること	test_validation_fails_for_whitespace_only	空白のみtitle/bodyでpostJson	422																						
-Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	存在しない資格IDでは認可しないこと	test_authorize_returns_false_for_nonexistent_certification_id	存在しないULIDでpostJson	403																						
+Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	存在しない資格IDを拒否すること	test_validation_fails_for_nonexistent_certification_id	存在しないULIDでpostJson	422																						
 Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	非公開資格では認可しないこと	test_authorize_returns_false_for_non_published_certification	Draft/Archived資格IDでpostJson	403																						
 Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	非生徒は認可しないこと	test_authorize_returns_false_for_non_student	Coach/AdminでpostJson	403																						
 Unit	tests/Unit/Http/Requests/QaThread/UpdateRequestTest.php	正常入力で更新できること	test_validation_passes_with_valid_payload	投稿者本人でtitle/bodyをPATCH	302・DB更新																						
@@ -31,7 +31,7 @@ Unit	tests/Unit/Models/QaThreadTest.php	資格とのリレーションで資格�
 Unit	tests/Unit/Models/QaThreadTest.php	回答とのリレーションで回答を取得できること	test_replies_relation_returns_attached_replies	QaThreadに複数のQaReplyを作成し、$thread->repliesを取得	対象スレッドの回答のみ取得され、件数が一致する																						
 Unit	tests/Unit/Models/QaThreadTest.php	資格で絞り込めること	test_scope_for_certification_filters_by_certification_id	forCertification()を実行	指定資格のみ																						
 Unit	tests/Unit/Models/QaThreadTest.php	未解決で絞り込めること	test_scope_by_status_filters_unresolved_as_open	byStatus('unresolved')を実行	openのみ																						
-Unit	tests/Unit/Models/QaThreadTest.php	解決済みで絞り込めること	test_scope_by_status_filters_resolved	byStatus('resolved')を実行	resolvedのみ																						
+Unit	tests/Unit/Models/QaThreadTest.php	解決済で絞り込めること	test_scope_by_status_filters_resolved	byStatus('resolved')を実行	resolvedのみ																						
 Unit	tests/Unit/Models/QaThreadTest.php	状態未指定時は絞り込まないこと	test_scope_by_status_does_not_filter_when_null	byStatus(null)を実行	全件																						
 Unit	tests/Unit/Models/QaThreadTest.php	タイトル一致で検索できること	test_scope_keyword_matches_title	タイトルに検索語を設定してkeyword()を実行	対象取得																						
 Unit	tests/Unit/Models/QaThreadTest.php	本文一致で検索できること	test_scope_keyword_matches_body	本文に検索語を設定してkeyword()を実行	対象取得																						
@@ -45,9 +45,8 @@ Unit	tests/Unit/Policies/QaThreadPolicyTest.php	Studentは質問スレッドを�
 Unit	tests/Unit/Policies/QaThreadPolicyTest.php	CoachとAdminは質問スレッドを作成できないこと	test_create_denied_for_non_student	Coach・Adminで質問スレッド作成可否を確認	すべてfalse																						
 Unit	tests/Unit/Policies/QaThreadPolicyTest.php	質問スレッドの所有Studentは公開済みスレッドを更新できること	test_update_allowed_for_owner_student	所有者Studentで更新可否を確認	TRUE																						
 Unit	tests/Unit/Policies/QaThreadPolicyTest.php	質問スレッドの所有者でないStudentは更新できないこと	test_update_denied_for_other_student	他Studentで更新可否を確認	FALSE																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	所有Studentは回答のない質問スレッドを削除できること	test_delete_allowed_for_owner_without_replies	所有者Student・回答なしのスレッドで削除可否を確認	TRUE																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	所有Studentは回答のある質問スレッドを削除できないこと	test_delete_denied_for_owner_with_replies	所有者Student・回答ありのスレッドで削除可否を確認	FALSE																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	Adminは回答のある質問スレッドを削除できること	test_delete_allowed_for_admin_with_replies	Admin・回答ありのスレッドで削除可否を確認	TRUE																						
+Unit	tests/Unit/Policies/QaThreadPolicyTest.php	所有Studentは質問スレッドを削除できること	test_delete_allowed_for_owner_student	所有者Studentのスレッドで削除可否を確認	TRUE																						
+Unit	tests/Unit/Policies/QaThreadPolicyTest.php	Adminは質問スレッドを削除できること	test_delete_allowed_for_admin	Adminのスレッド削除可否を確認	TRUE																						
 Unit	tests/Unit/Policies/QaThreadPolicyTest.php	Coachは質問スレッドを削除できないこと	test_delete_denied_for_coach	Coachで質問スレッド削除可否を確認	FALSE																						
 Unit	tests/Unit/Policies/QaThreadPolicyTest.php	質問スレッドの所有Studentは解決・未解決を変更できること	test_student_can_resolve_and_unresolve_own_thread	所有者Studentでresolve・unresolve可否を確認	すべてtrue																						
 Unit	tests/Unit/Policies/QaThreadPolicyTest.php	質問スレッドの所有者でないStudentは解決・未解決を変更できないこと	test_student_cannot_resolve_and_unresolve_other_users_thread	他Studentでresolve・unresolve可否を確認	すべてfalse																						
@@ -58,10 +57,12 @@ Unit	tests/Unit/Policies/QaReplyPolicyTest.php	Adminは回答を削除できる�
 Feature UseCase	tests/Feature/UseCases/QaThread/ShowActionTest.php	詳細で投稿者・資格・回答者・回答数を取得できること	test_show_loads_required_relations_and_count	回答付きスレッドでShowAction実行	必要Relationとcountロード済																						
 Feature UseCase	tests/Feature/UseCases/QaThread/ShowActionTest.php	詳細の回答は古い順であること	test_show_orders_replies_oldest_first	回答のcreated_atをずらして実行	昇順																						
 Feature UseCase	tests/Feature/UseCases/QaThread/DestroyActionTest.php	配下回答を削除してからスレッドを削除すること	test_deletes_target_thread_and_its_replies_only	回答あり対象と別スレッド回答を用意して実行	対象親子のみ削除																						
-Feature UseCase	tests/Feature/UseCases/QaThread/ResolveActionTest.php	未解決を解決済みに変更できること	test_resolve_changes_open_to_resolved_and_sets_resolved_at	OpenでResolveAction実行	resolved・日時あり																						
-Feature UseCase	tests/Feature/UseCases/QaThread/ResolveActionTest.php	解決済みを再度解決できないこと	test_resolve_throws_for_already_resolved_thread	ResolvedでResolveAction実行	QaThreadStatusTransitionException																						
-Feature UseCase	tests/Feature/UseCases/QaThread/UnresolveActionTest.php	解決済みを未解決に戻せること	test_unresolve_changes_resolved_to_open_and_clears_resolved_at	ResolvedでUnresolveAction実行	open・日時null																						
-Feature UseCase	tests/Feature/UseCases/QaThread/UnresolveActionTest.php	未解決を再度未解決にできないこと	test_unresolve_throws_for_open_thread	OpenでUnresolveAction実行	QaThreadStatusTransitionException																						
+Feature UseCase	tests/Feature/UseCases/QaThread/DestroyActionTest.php	Studentは回答なしのスレッドを削除できること	test_student_can_delete_thread_without_replies	Student所有・回答なしでDestroyActionを実行	スレッド削除成功																						
+Feature UseCase	tests/Feature/UseCases/QaThread/DestroyActionTest.php	Studentは回答ありのスレッドを削除できないこと	test_student_cannot_delete_thread_with_replies	Student所有・回答ありでDestroyActionを実行	QaThreadHasRepliesExceptionが発生																						
+Feature UseCase	tests/Feature/UseCases/QaThread/ResolveActionTest.php	未解決を解決済に変更できること	test_resolve_changes_open_to_resolved_and_sets_resolved_at	OpenでResolveAction実行	resolved・日時あり																						
+Feature UseCase	tests/Feature/UseCases/QaThread/ResolveActionTest.php	解決済を再度解決できないこと	test_resolve_throws_for_already_resolved_thread	ResolvedでResolveAction実行	QaThreadStatusTransitionException（409）																						
+Feature UseCase	tests/Feature/UseCases/QaThread/UnresolveActionTest.php	解決済を未解決に戻せること	test_unresolve_changes_resolved_to_open_and_clears_resolved_at	ResolvedでUnresolveAction実行	open・日時null																						
+Feature UseCase	tests/Feature/UseCases/QaThread/UnresolveActionTest.php	未解決を再度未解決にできないこと	test_unresolve_throws_for_open_thread	OpenでUnresolveAction実行	QaThreadStatusTransitionException（409）																						
 Feature HTTP	tests/Feature/Http/QaBoard/IndexTest.php	管理者は全資格状態の一覧を閲覧できること	test_admin_can_view_qa_thread_list	全状態のスレッドを作成してAdminでGET	全資格状態のスレッドが表示される																						
 Feature HTTP	tests/Feature/Http/QaBoard/IndexTest.php	生徒は公開中資格の一覧のみ閲覧できること	test_student_sees_only_published_threads	公開・非公開資格のスレッドを作成してStudentでGET	公開中資格のスレッドのみ表示される																						
 Feature HTTP	tests/Feature/Http/QaBoard/IndexTest.php	コーチは担当する公開中資格の一覧のみ閲覧できること	test_coach_sees_only_assigned_published_threads	担当・未担当および公開・非公開資格のスレッドを作成してCoachでGET	担当かつ公開中資格のスレッドのみ表示される																						
@@ -75,7 +76,7 @@ Feature HTTP	tests/Feature/Http/QaBoard/ShowTest.php	未担当Coachはスレッ�
 Feature HTTP	tests/Feature/Http/QaBoard/CrudThreadTest.php	公開資格へ生徒が投稿できること	test_student_can_store_thread_for_published_certification	StudentでPOST	詳細へredirect・DB登録																						
 Feature HTTP	tests/Feature/Http/QaBoard/CrudThreadTest.php	非公開資格・非生徒は投稿できないこと	test_store_thread_rejects_non_published_or_non_student	Draft/Archived・Coach/AdminでpostJson	403																						
 Feature HTTP	tests/Feature/Http/QaBoard/CrudThreadTest.php	投稿者だけが更新できること	test_owner_can_update_thread_and_other_student_cannot	本人PATCH・他人patchJson	本人は更新成功・資格IDは変更されず、他人は403																						
-Feature HTTP	tests/Feature/Http/QaBoard/CrudThreadTest.php	削除条件と管理者削除を確認すること	test_owner_can_delete_without_replies_and_admin_can_delete_with_replies	本人回答なし・本人回答あり・Admin回答ありでDELETE	本人なし成功・本人あり403・Admin親子削除																						
+Feature HTTP	tests/Feature/Http/QaBoard/CrudThreadTest.php	削除条件と管理者削除を確認すること	test_owner_can_delete_without_replies_and_admin_can_delete_with_replies	本人回答なし・本人回答あり・Admin回答ありでDELETE	本人なし成功・本人あり409・Admin親子削除																						
 Feature HTTP	tests/Feature/Http/QaBoard/ResolveThreadTest.php	投稿者だけが解決・未解決変更できること	test_owner_can_resolve_and_unresolve_thread	本人POST・他人/Coach/Admin postJson	本人成功・他者403																						
 Feature HTTP	tests/Feature/Http/QaBoard/CrudReplyTest.php	生徒・担当コーチだけが回答できること	test_student_and_assigned_coach_can_store_reply	Student/担当Coach/Admin/未担当CoachでPOST	前2者成功・後2者403																						
 Feature HTTP	tests/Feature/Http/QaBoard/CrudReplyTest.php	回答者だけが回答を更新できること	test_reply_author_can_update_and_others_cannot	本人PATCH・他者patchJson	本人成功・他者403																						
