@@ -1,85 +1,42 @@
-区分	ファイル	テスト内容（日本語）	テストメソッド名	実行内容	期待結果																						
-Unit	tests/Unit/Enums/QaThreadStatusTest.php	Enumが未解決・解決済の2値を持つこと	test_enum_lists_two_status_values	QaThreadStatus::cases()の値を確認	open、resolved																						
-Unit	tests/Unit/Enums/QaThreadStatusTest.php	日本語ラベルを返すこと	test_japanese_labels	Open->label()とResolved->label()を確認	未解決／解決済																						
-Unit	tests/Unit/Http/Requests/QaThread/IndexRequestTest.php	フィルタ未指定で通過すること	test_passes_with_empty_filters	空配列をrules()でValidator検証	passes																						
-Unit	tests/Unit/Http/Requests/QaThread/IndexRequestTest.php	有効な状態フィルタを許可すること	test_passes_with_valid_status	status=unresolved/resolvedを検証	passes																						
-Unit	tests/Unit/Http/Requests/QaThread/IndexRequestTest.php	不正な状態フィルタを拒否すること	test_fails_when_status_invalid	status=maybeを検証	statusにエラー																						
-Unit	tests/Unit/Http/Requests/QaThread/IndexRequestTest.php	keyword最大長超過を拒否すること	test_fails_when_keyword_exceeds_max	101文字keywordを検証	keywordにエラー																						
-Unit	tests/Unit/Http/Requests/QaThread/IndexRequestTest.php	存在しない資格IDを拒否すること	test_fails_when_certification_id_not_exists	実在しないULIDを検証	certification_idにエラー																						
-Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	正常入力で通過しスレッドを作成できること	test_validation_passes_with_valid_payload	Student+Published資格でPOST	302・DB登録																						
-Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	必須・文字数制限を検証すること	test_validation_fails	certification_id空、title空/201文字、body空/5001文字でpostJson	422・該当フィールドにエラー																						
-Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	全角・半角空白だけのタイトル・本文を拒否すること	test_validation_fails_for_whitespace_only	空白のみtitle/bodyでpostJson	422																						
-Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	存在しない資格IDを拒否すること	test_validation_fails_for_nonexistent_certification_id	存在しないULIDでpostJson	422																						
-Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	非公開資格では認可しないこと	test_authorize_returns_false_for_non_published_certification	Draft/Archived資格IDでpostJson	403																						
-Unit	tests/Unit/Http/Requests/QaThread/StoreRequestTest.php	非生徒は認可しないこと	test_authorize_returns_false_for_non_student	Coach/AdminでpostJson	403																						
-Unit	tests/Unit/Http/Requests/QaThread/UpdateRequestTest.php	正常入力で更新できること	test_validation_passes_with_valid_payload	投稿者本人でtitle/bodyをPATCH	302・DB更新																						
-Unit	tests/Unit/Http/Requests/QaThread/UpdateRequestTest.php	必須・文字数制限を検証すること	test_validation_fails	title空/201文字、body空/5001文字でpatchJson	422																						
-Unit	tests/Unit/Http/Requests/QaThread/UpdateRequestTest.php	全角・半角空白だけのタイトル・本文を拒否すること	test_validation_fails_for_whitespace_only	空白のみtitle/bodyでpatchJson	422																						
-Unit	tests/Unit/Http/Requests/QaThread/UpdateRequestTest.php	投稿者以外は認可しないこと	test_authorize_returns_false_for_non_owner	別StudentでpatchJson	403																						
-Unit	tests/Unit/Http/Requests/QaReply/StoreRequestTest.php	正常入力で回答を作成できること	test_validation_passes_with_valid_payload	Studentが公開スレッドへPOST	302・DB登録																						
-Unit	tests/Unit/Http/Requests/QaReply/StoreRequestTest.php	本文必須・文字数制限を検証すること	test_validation_fails	body空/5001文字でpostJson	422																						
-Unit	tests/Unit/Http/Requests/QaReply/StoreRequestTest.php	全角・半角空白だけの本文を拒否すること	test_validation_fails_for_whitespace_only	空白のみbodyでpostJson	422																						
-Unit	tests/Unit/Http/Requests/QaReply/StoreRequestTest.php	未担当Coachは回答を投稿できないこと	test_authorize_returns_false_for_unassigned_coach	未担当CoachでpostJson	403																						
-Unit	tests/Unit/Http/Requests/QaReply/UpdateRequestTest.php	正常入力で回答を更新できること	test_validation_passes_with_valid_payload	回答者本人がbodyでPATCH	302・DB更新																						
-Unit	tests/Unit/Http/Requests/QaReply/UpdateRequestTest.php	本文必須・文字数制限を検証すること	test_validation_fails	body空/5001文字でpatchJson	422																						
-Unit	tests/Unit/Http/Requests/QaReply/UpdateRequestTest.php	全角・半角空白だけの本文を拒否すること	test_validation_fails_for_whitespace_only	空白のみbodyでpatchJson	422																						
-Unit	tests/Unit/Http/Requests/QaReply/UpdateRequestTest.php	回答者以外を認可しないこと	test_authorize_returns_false_for_non_author	別ユーザーでpatchJson	403																						
-Unit	tests/Unit/Models/QaThreadTest.php	statusがQaThreadStatusへcastされること	test_status_is_cast_to_qa_thread_status_enum	再取得してstatus型を確認	QaThreadStatus																						
-Unit	tests/Unit/Models/QaThreadTest.php	resolved_atが日時型へcastされること	test_resolved_at_is_cast_to_datetime	再取得してresolved_at型を確認	Carbon系日時型																						
-Unit	tests/Unit/Models/QaThreadTest.php	投稿者とのリレーションで投稿者を取得できること	test_user_relation_returns_owner_user	投稿者を指定してQaThreadを作成し、$thread->userを取得	指定したUserと一致する																						
-Unit	tests/Unit/Models/QaThreadTest.php	資格とのリレーションで資格を取得できること	test_certification_relation_returns_target_certification	資格を指定してQaThreadを作成し、$thread->certificationを取得	指定したCertificationと一致する																						
-Unit	tests/Unit/Models/QaThreadTest.php	回答とのリレーションで回答を取得できること	test_replies_relation_returns_attached_replies	QaThreadに複数のQaReplyを作成し、$thread->repliesを取得	対象スレッドの回答のみ取得され、件数が一致する																						
-Unit	tests/Unit/Models/QaThreadTest.php	資格で絞り込めること	test_scope_for_certification_filters_by_certification_id	forCertification()を実行	指定資格のみ																						
-Unit	tests/Unit/Models/QaThreadTest.php	未解決で絞り込めること	test_scope_by_status_filters_unresolved_as_open	byStatus('unresolved')を実行	openのみ																						
-Unit	tests/Unit/Models/QaThreadTest.php	解決済で絞り込めること	test_scope_by_status_filters_resolved	byStatus('resolved')を実行	resolvedのみ																						
-Unit	tests/Unit/Models/QaThreadTest.php	状態未指定時は絞り込まないこと	test_scope_by_status_does_not_filter_when_null	byStatus(null)を実行	全件																						
-Unit	tests/Unit/Models/QaThreadTest.php	タイトル一致で検索できること	test_scope_keyword_matches_title	タイトルに検索語を設定してkeyword()を実行	対象取得																						
-Unit	tests/Unit/Models/QaThreadTest.php	本文一致で検索できること	test_scope_keyword_matches_body	本文に検索語を設定してkeyword()を実行	対象取得																						
-Unit	tests/Unit/Models/QaThreadTest.php	回答本文一致で検索できること	test_scope_keyword_matches_reply_body	回答本文に検索語を設定してkeyword()を実行	親スレッド取得																						
-Unit	tests/Unit/Models/QaReplyTest.php	質問スレッドとのリレーションで質問スレッドを取得できること	test_thread_relation_returns_parent_thread	QaThreadを指定してQaReplyを作成し、$reply->threadを取得	指定したQaThreadと一致する																						
-Unit	tests/Unit/Models/QaReplyTest.php	ユーザーとのリレーションで投稿者を取得できること	test_user_relation_returns_owner_user	投稿者を指定してQaReplyを作成し、$reply->userを取得	指定したUserと一致する																						
-Unit	tests/Unit/Models/QaReplyTest.php	作成日時昇順で取得できること	test_ordered_scope_orders_by_created_at_ascending	作成日時をずらしてordered()を実行	最も古い回答が先頭になる																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	全ロールが質問スレッド一覧を閲覧できること	test_view_any_returns_expected_for_role	Admin・Student・Coachで一覧閲覧可否を確認	全ロールでtrue																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	Admin・Student・Coachが質問スレッドを閲覧できる条件を確認	test_view_returns_expected_for_role_and_thread	Adminは全認証ステータス、Studentは公開済み、担当Coachは公開済み、未担当Coachは閲覧不可を確認	条件に応じてtrue/false																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	Studentは質問スレッドを作成できること	test_create_allowed_for_student	Studentで質問スレッド作成可否を確認	TRUE																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	CoachとAdminは質問スレッドを作成できないこと	test_create_denied_for_non_student	Coach・Adminで質問スレッド作成可否を確認	すべてfalse																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	質問スレッドの所有Studentは公開済みスレッドを更新できること	test_update_allowed_for_owner_student	所有者Studentで更新可否を確認	TRUE																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	質問スレッドの所有者でないStudentは更新できないこと	test_update_denied_for_other_student	他Studentで更新可否を確認	FALSE																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	所有Studentは質問スレッドを削除できること	test_delete_allowed_for_owner_student	所有者Studentのスレッドで削除可否を確認	TRUE																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	Adminは質問スレッドを削除できること	test_delete_allowed_for_admin	Adminのスレッド削除可否を確認	TRUE																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	Coachは質問スレッドを削除できないこと	test_delete_denied_for_coach	Coachで質問スレッド削除可否を確認	FALSE																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	質問スレッドの所有Studentは解決・未解決を変更できること	test_student_can_resolve_and_unresolve_own_thread	所有者Studentでresolve・unresolve可否を確認	すべてtrue																						
-Unit	tests/Unit/Policies/QaThreadPolicyTest.php	質問スレッドの所有者でないStudentは解決・未解決を変更できないこと	test_student_cannot_resolve_and_unresolve_other_users_thread	他Studentでresolve・unresolve可否を確認	すべてfalse																						
-Unit	tests/Unit/Policies/QaReplyPolicyTest.php	Studentは公開済み質問スレッドに回答を作成できること	test_create_allowed_for_student_on_published_thread	Studentで公開済みスレッドへの回答作成可否を確認	TRUE																						
-Unit	tests/Unit/Policies/QaReplyPolicyTest.php	担当Coachは公開済み質問スレッドに回答を作成でき、未担当CoachとAdminは作成できないこと	test_create_allowed_for_coach_only_for_assigned_published_thread	担当Coach・未担当Coach・Adminで公開済みスレッドへの回答作成可否を確認	担当Coach=true、未担当Coach・Admin=false																						
-Unit	tests/Unit/Policies/QaReplyPolicyTest.php	回答の作成者は回答を更新・削除でき、作成者でないユーザーは更新・削除できないこと	test_update_and_delete_allowed_for_owner_on_published_thread	回答作成者と他Student・他Coach等で更新・削除可否を確認	作成者はすべてtrue、非作成者はすべてfalse																						
-Unit	tests/Unit/Policies/QaReplyPolicyTest.php	Adminは回答を削除できるが更新できないこと	test_admin_can_delete_but_cannot_update_reply	Adminで回答の更新・削除可否を確認	update=false、delete=true																						
-Feature UseCase	tests/Feature/UseCases/QaThread/ShowActionTest.php	詳細で投稿者・資格・回答者・回答数を取得できること	test_show_loads_required_relations_and_count	回答付きスレッドでShowAction実行	必要Relationとcountロード済																						
-Feature UseCase	tests/Feature/UseCases/QaThread/ShowActionTest.php	詳細の回答は古い順であること	test_show_orders_replies_oldest_first	回答のcreated_atをずらして実行	昇順																						
-Feature UseCase	tests/Feature/UseCases/QaThread/DestroyActionTest.php	配下回答を削除してからスレッドを削除すること	test_deletes_target_thread_and_its_replies_only	回答あり対象と別スレッド回答を用意して実行	対象親子のみ削除																						
-Feature UseCase	tests/Feature/UseCases/QaThread/DestroyActionTest.php	Studentは回答なしのスレッドを削除できること	test_student_can_delete_thread_without_replies	Student所有・回答なしでDestroyActionを実行	スレッド削除成功																						
-Feature UseCase	tests/Feature/UseCases/QaThread/DestroyActionTest.php	Studentは回答ありのスレッドを削除できないこと	test_student_cannot_delete_thread_with_replies	Student所有・回答ありでDestroyActionを実行	QaThreadHasRepliesExceptionが発生																						
-Feature UseCase	tests/Feature/UseCases/QaThread/ResolveActionTest.php	未解決を解決済に変更できること	test_resolve_changes_open_to_resolved_and_sets_resolved_at	OpenでResolveAction実行	resolved・日時あり																						
-Feature UseCase	tests/Feature/UseCases/QaThread/ResolveActionTest.php	解決済を再度解決できないこと	test_resolve_throws_for_already_resolved_thread	ResolvedでResolveAction実行	QaThreadStatusTransitionException（409）																						
-Feature UseCase	tests/Feature/UseCases/QaThread/UnresolveActionTest.php	解決済を未解決に戻せること	test_unresolve_changes_resolved_to_open_and_clears_resolved_at	ResolvedでUnresolveAction実行	open・日時null																						
-Feature UseCase	tests/Feature/UseCases/QaThread/UnresolveActionTest.php	未解決を再度未解決にできないこと	test_unresolve_throws_for_open_thread	OpenでUnresolveAction実行	QaThreadStatusTransitionException（409）																						
-Feature HTTP	tests/Feature/Http/QaBoard/IndexTest.php	管理者は全資格状態の一覧を閲覧できること	test_admin_can_view_qa_thread_list	全状態のスレッドを作成してAdminでGET	全資格状態のスレッドが表示される																						
-Feature HTTP	tests/Feature/Http/QaBoard/IndexTest.php	生徒は公開中資格の一覧のみ閲覧できること	test_student_sees_only_published_threads	公開・非公開資格のスレッドを作成してStudentでGET	公開中資格のスレッドのみ表示される																						
-Feature HTTP	tests/Feature/Http/QaBoard/IndexTest.php	コーチは担当する公開中資格の一覧のみ閲覧できること	test_coach_sees_only_assigned_published_threads	担当・未担当および公開・非公開資格のスレッドを作成してCoachでGET	担当かつ公開中資格のスレッドのみ表示される																						
-Feature HTTP	tests/Feature/Http/QaBoard/IndexTest.php	資格フィルタで一致するスレッドのみ表示されること	test_certification_filter_returns_only_matching_threads	資格IDを指定してGET	指定資格のスレッドのみ表示される																						
-Feature HTTP	tests/Feature/Http/QaBoard/IndexTest.php	状態フィルタで一致するスレッドのみ表示されること	test_status_filter_returns_only_matching_threads	状態を指定してGET	指定状態のスレッドのみ表示される																						
-Feature HTTP	tests/Feature/Http/QaBoard/IndexTest.php	キーワードで一致するスレッドのみ表示されること	test_keyword_search_filters_by_title_body_and_reply	タイトル・本文・回答本文に一致するキーワードを指定してGET	キーワードに一致するスレッドのみ表示される																						
-Feature HTTP	tests/Feature/Http/QaBoard/IndexTest.php	新しい順・20件ページングで表示されること	test_paginates_20_per_page	21件以上のスレッドを日時をずらして作成してGET	新しい順で1ページ20件表示される																						
-Feature HTTP	tests/Feature/Http/QaBoard/ShowTest.php	質問スレッド詳細を表示できること	test_student_can_view_thread_detail	公開済みスレッドへStudentでGET	200・対象スレッドの詳細を表示																						
-eature HTTP	tests/Feature/Http/QaBoard/ShowTest.php	Studentは非公開資格のスレッドを表示できないこと	test_student_gets_403_on_non_published_thread	非公開資格のスレッドへStudentでGET	403																						
-Feature HTTP	tests/Feature/Http/QaBoard/ShowTest.php	未担当Coachはスレッドを表示できないこと	test_unassigned_coach_gets_403_on_thread	未担当Coachで公開済みスレッドへGET	403																						
-Feature HTTP	tests/Feature/Http/QaBoard/CrudThreadTest.php	公開資格へ生徒が投稿できること	test_student_can_store_thread_for_published_certification	StudentでPOST	詳細へredirect・DB登録																						
-Feature HTTP	tests/Feature/Http/QaBoard/CrudThreadTest.php	非公開資格・非生徒は投稿できないこと	test_store_thread_rejects_non_published_or_non_student	Draft/Archived・Coach/AdminでpostJson	403																						
-Feature HTTP	tests/Feature/Http/QaBoard/CrudThreadTest.php	投稿者だけが更新できること	test_owner_can_update_thread_and_other_student_cannot	本人PATCH・他人patchJson	本人は更新成功・資格IDは変更されず、他人は403																						
-Feature HTTP	tests/Feature/Http/QaBoard/CrudThreadTest.php	削除条件と管理者削除を確認すること	test_owner_can_delete_without_replies_and_admin_can_delete_with_replies	本人回答なし・本人回答あり・Admin回答ありでDELETE	本人なし成功・本人あり409・Admin親子削除																						
-Feature HTTP	tests/Feature/Http/QaBoard/ResolveThreadTest.php	投稿者だけが解決・未解決変更できること	test_owner_can_resolve_and_unresolve_thread	本人POST・他人/Coach/Admin postJson	本人成功・他者403																						
-Feature HTTP	tests/Feature/Http/QaBoard/CrudReplyTest.php	生徒・担当コーチだけが回答できること	test_student_and_assigned_coach_can_store_reply	Student/担当Coach/Admin/未担当CoachでPOST	前2者成功・後2者403																						
-Feature HTTP	tests/Feature/Http/QaBoard/CrudReplyTest.php	回答者だけが回答を更新できること	test_reply_author_can_update_and_others_cannot	本人PATCH・他者patchJson	本人成功・他者403																						
-Feature HTTP	tests/Feature/Http/QaBoard/CrudReplyTest.php	回答者本人と管理者が回答を削除できること	test_author_and_admin_can_destroy_reply	本人DELETE・Admin DELETE・他者deleteJson	本人成功・Adminはadmin詳細へredirect・他者403																						
-Feature HTTP	tests/Feature/Http/QaBoard/ReplyNestedBindingTest.php	スレッドと回答の親子関係が不一致なら404になること	test_nested_reply_routes_return_404_for_parent_mismatch	thread A URLにthread BのreplyでGET/PATCH/DELETE	404																						
-Feature HTTP	tests/Feature/Http/QaBoard/QaThreadIndexQueryCountTest.php	一覧でN+1が起きないこと	test_index_query_count_does_not_grow_with_thread_count	2件時と12件時をDB::listenで比較	クエリ増加が閾値内																						
+区分	ファイル	テスト内容	テストメソッド名	実行内容	期待結果																				
+Unit	Enums/MeetingPackStatusTest.php	面談パックのステータスEnumにdraft・published・archivedが定義されている	test_enum_lists_three_status_values	MeetingPackStatus::cases()を確認する	draft・published・archivedの3種類が定義されている																				
+Unit	Enums/MeetingPackStatusTest.php	面談パックのステータスEnumに日本語ラベルが定義されている	test_japanese_labels	各ステータスのlabel()を確認する	各ステータスに正しい日本語ラベルが設定されている																				
+Unit	Http/Requests/MeetingPack/IndexRequestTest.php	フィルタ未指定でバリデーションを通過する	test_passes_with_empty_filters	空のパラメータでValidatorを実行する	バリデーションを通過する																				
+Unit	Http/Requests/MeetingPack/IndexRequestTest.php	有効なstatusでバリデーションを通過する	test_passes_with_valid_status	MeetingPackStatusの有効な値を指定してValidatorを実行する	バリデーションを通過する																				
+Unit	Http/Requests/MeetingPack/IndexRequestTest.php	keywordが101文字でバリデーションエラーになる	test_fails_when_keyword_exceeds_max	101文字のkeywordを指定してValidatorを実行する	keywordのバリデーションエラーになる																				
+Unit	Http/Requests/MeetingPack/IndexRequestTest.php	不正なstatusでバリデーションエラーになる	test_fails_when_status_invalid	存在しないstatusを指定してValidatorを実行する	statusのバリデーションエラーになる																				
+Unit	Http/Requests/MeetingPack/StoreRequestTest.php	有効な値でバリデーションを通過する	test_validation_passes_with_full_valid_payload	必要な項目に有効な値を指定してValidatorを実行する	バリデーションを通過する																				
+Unit	Http/Requests/MeetingPack/StoreRequestTest.php	不正な項目でバリデーションエラーになる	test_validation_fails	必須・文字数・数値範囲・型の不正値を指定する	指定した項目のバリデーションエラーになる																				
+Unit	Http/Requests/MeetingPack/StoreRequestTest.php	非adminユーザーの場合、認可されない	test_authorize_returns_false_for_non_admin	非adminユーザーで認可処理を実行する	認可されない																				
+Unit	Http/Requests/MeetingPack/UpdateRequestTest.php	有効な値でバリデーションを通過する	test_validation_passes_with_full_valid_payload	必要な項目に有効な値を指定してValidatorを実行する	バリデーションを通過する																				
+Unit	Http/Requests/MeetingPack/UpdateRequestTest.php	不正な項目でバリデーションエラーになる	test_validation_fails_for_invalid_field	必須・文字数・数値範囲・型の不正値を指定する	指定した項目のバリデーションエラーになる																				
+Unit	Policies/MeetingPackPolicyTest.php	adminのみ各abilityを許可する	test_admin_only_abilities_match_role_expectation	各abilityについてadmin・coach・studentの組み合わせを検証する	adminのみtrue、coach・studentはfalseになる																				
+Feature	Http/MeetingPack/IndexTest.php	adminが一覧画面を表示できる	test_admin_can_view_index	adminで一覧画面へGETする	200系レスポンスとなり、一覧画面が表示される																				
+Feature	Http/MeetingPack/IndexTest.php	studentが一覧画面にアクセスできない	test_student_cannot_access_admin_meeting_packs	studentで一覧画面へGETする	403になる																				
+Feature	Http/MeetingPack/IndexTest.php	coachが一覧画面にアクセスできない	test_coach_cannot_access_admin_meeting_packs	coachで一覧画面へGETする	403になる																				
+Feature	Http/MeetingPack/IndexTest.php	keywordで面談パックを絞り込める	test_keyword_filter_matches_name_only	nameがkeywordに一致する面談パックと一致しない面談パックを作成し、keywordを指定して一覧画面へGETする	keywordに一致する面談パックが表示され、一致しない面談パックは表示されない																				
+Feature	Http/MeetingPack/IndexTest.php	statusで面談パックを絞り込める	test_status_filter_returns_only_matching_status	draft・published・archivedの面談パックを作成し、status=publishedを指定して一覧画面へGETする	publishedの面談パックのみ表示され、draft・archivedの面談パックは表示されない																				
+Feature	Http/MeetingPack/IndexTest.php	公開中が優先され、sort_order昇順、同一sort_orderではcreated_at降順で取得できる	test_prioritizes_published_then_orders_by_sort_order_and_created_at	published・draft・archivedの面談パックを作成し、sort_orderとcreated_atを設定して一覧画面へGETする	publishedがdraftやarchivedより先に表示され、sort_order昇順、同一sort_orderではcreated_at降順で表示される																				
+Feature	Http/MeetingPack/IndexTest.php	20件単位でページングされる	test_paginates_20_per_page	22件の面談パックを作成して一覧画面へGETする	1ページあたり20件となり、全22件が取得対象となる																				
+Feature	Http/MeetingPack/StoreTest.php	管理者が面談パックを登録できる	test_admin_can_create_meeting_pack_as_draft	管理者で面談パック登録リクエストを実行する	登録に成功し、ステータスがdraftで作成され、created_by_user_idとupdated_by_user_idに登録した管理者のIDが設定される																				
+Feature	Http/MeetingPack/StoreTest.php	面談パック登録時のバリデーション	test_required_fields_are_validated	必須項目を空にして面談パック登録リクエストを実行する	バリデーションエラーとなる																				
+Feature	Http/MeetingPack/StoreTest.php	コーチは面談パックを登録できない	test_coach_cannot_create_meeting_pack	コーチで面談パック登録リクエストを実行する	403 Forbiddenとなる																				
+Feature	Http/MeetingPack/UpdateTest.php	管理者が面談パックを更新できる	test_admin_can_update_meeting_pack	管理者で面談パックのnameとdescriptionを更新する	更新に成功し、nameとdescriptionが更新され、updated_by_user_idに更新した管理者のIDが設定される																				
+Feature	Http/MeetingPack/UpdateTest.php	更新時にステータスを変更できない	test_status_is_unchanged_even_if_payload_includes_status	公開中の面談パックにstatus=draftを含めて更新リクエストを実行する	リクエストに含めたstatusは反映されず、ステータスはpublishedのまま維持される																				
+Feature	Http/MeetingPack/UpdateTest.php	コーチは面談パックを更新できない	test_coach_cannot_update	コーチで面談パックの更新リクエストを実行する	403 Forbiddenとなる																				
+Feature	Http/MeetingPack/DestroyTest.php	draftの面談パックを削除できる	test_admin_can_delete_draft_meeting_pack	管理者でdraftの面談パック削除リクエストを実行する	HTTPリダイレクトとなり、対象レコードがDBから削除される																				
+Feature	Http/MeetingPack/DestroyTest.php	archivedの面談パックを削除できる	test_admin_can_delete_archived_meeting_pack	管理者でarchivedの面談パック削除リクエストを実行する	HTTPリダイレクトとなり、対象レコードがDBから削除される																				
+Feature	Http/MeetingPack/DestroyTest.php	publishedの面談パックは削除できない	test_cannot_delete_published_meeting_pack	管理者でpublishedの面談パック削除リクエストを実行する	HTTP 409となり、対象レコードがDBに残る																				
+Feature	Http/MeetingPack/DestroyTest.php	コーチは面談パックを削除できない	test_coach_cannot_delete	コーチでdraftの面談パック削除リクエストを実行する	403 Forbiddenとなる																				
+Feature	Http/MeetingPack/PublishTest.php	draftの面談パックを公開できる	test_admin_can_publish_draft_meeting_pack	管理者でdraftの面談パックに公開操作を実行する	HTTPリダイレクトとなり、ステータスがpublishedに遷移する																				
+Feature	Http/MeetingPack/PublishTest.php	publishedの面談パックは公開できない	test_cannot_publish_already_published	管理者でpublishedの面談パックに公開操作を実行する	HTTP 409となる																				
+Feature	Http/MeetingPack/PublishTest.php	archivedの面談パックは公開できない	test_cannot_publish_archived	管理者でarchivedの面談パックに公開操作を実行する	HTTP 409となる																				
+Feature	Http/MeetingPack/PublishTest.php	コーチは面談パックを公開できない	test_coach_cannot_publish	コーチで面談パックに公開操作を実行する	403 Forbiddenとなる																				
+Feature	Http/MeetingPack/ArchiveTest.php	publishedの面談パックをアーカイブできる	test_admin_can_archive_published_meeting_pack	管理者でpublishedの面談パックにアーカイブ操作を実行する	HTTPリダイレクトとなり、ステータスがarchivedに遷移する																				
+Feature	Http/MeetingPack/ArchiveTest.php	draftの面談パックはアーカイブできない	test_cannot_archive_draft	管理者でdraftの面談パックにアーカイブ操作を実行する	HTTP 409となる																				
+Feature	Http/MeetingPack/ArchiveTest.php	archivedの面談パックはアーカイブできない	test_cannot_archive_already_archived	管理者でarchivedの面談パックにアーカイブ操作を実行する	HTTP 409となる																				
+Feature	Http/MeetingPack/ArchiveTest.php	コーチは面談パックをアーカイブできない	test_coach_cannot_archive	コーチで面談パックにアーカイブ操作を実行する	403 Forbiddenとなる																				
+Feature	Http/MeetingPack/UnarchiveTest.php	archivedの面談パックをdraftに戻せる	test_admin_can_unarchive_archived_meeting_pack	管理者でarchivedの面談パックにアーカイブ解除操作を実行する	HTTPリダイレクトとなり、ステータスがdraftに遷移する																				
+Feature	Http/MeetingPack/UnarchiveTest.php	publishedの面談パックはアーカイブ解除できない	test_cannot_unarchive_published	管理者でpublishedの面談パックにアーカイブ解除操作を実行する	HTTP 409となる																				
+Feature	Http/MeetingPack/UnarchiveTest.php	draftの面談パックはアーカイブ解除できない	test_cannot_unarchive_already_draft	管理者でdraftの面談パックにアーカイブ解除操作を実行する	HTTP 409となる																				
+Feature	Http/MeetingPack/UnarchiveTest.php	コーチは面談パックをアーカイブ解除できない	test_coach_cannot_unarchive	コーチでarchivedの面談パックにアーカイブ解除操作を実行する	403 Forbiddenとなる																				
