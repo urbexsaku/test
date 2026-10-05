@@ -1,0 +1,258 @@
+# ロール認可の実装整理
+
+このプロジェクトでは、認可は主に **3層**で実装されています。
+
+1. **ルートMiddleware**：画面・エンドポイント群に入れるロールを制限  
+2. **Policy**：操作単位・対象リソース単位で可否を判定  
+3. **FormRequestの `authorize()`**：更新系リクエストで、入力検証前に操作可否を再確認  
+
+MeetingPackは、このうち **ルートMiddleware + Policy + FormRequest** の3層を使う構成です。
+
+---
+
+## 1. ルートMiddlewareによる認可
+
+### 対象実装
+
+`routes/web.php`
+
+```php
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
+    Route::resource('meeting-packs', MeetingPackController::class)
+        ->parameters(['meeting-packs' => 'plan'])
+        ->names('admin.meeting-packs');
+
+    Route::post('meeting-packs/{plan}/publish', [MeetingPackController::class, 'publish'])
+        ->name('admin.meeting-packs.publish');
+
+    Route::post('meeting-packs/{plan}/archive', [MeetingPackController::class, 'archive'])
+        ->name('admin.meeting-packs.archive');
+
+    Route::post('meeting-packs/{plan}/unarchive', [MeetingPackController::class, 'unarchive'])
+        ->name('admin.meeting-packs.unarchive');
+});
+```
+
+`auth` で未認証ユーザーを止め、`role:admin` でadmin以外を止めます。
+
+### `role` Middlewareの実装
+
+`app/Http/Middleware/EnsureUserRole.php`
+
+```php
+public function handle(Request $request, Closure $next, string ...$roles): Response
+{
+    $user = $request->user();
+
+    if (! $user || ! in_array($user->role->value, $roles, true)) {
+        abort(403);
+    }
+
+    return $next($request);
+}
+```
+
+したがって、MeetingPackの全ルートに対し以下が保証されます。
+
+| 利用者 | 結果 |
+|---|---|
+| 未認証 | `auth` Middlewareでログイン画面へ |
+| student | `role:admin` で403 |
+| coach | `role:admin` で403 |
+| admin | Controllerへ到達 |
+
+このルートグループの構成は、資格管理の登録・更新・削除・状態遷移と同じです。
+
+---
+
+## 2. Policyによる認可
+
+### MeetingPackのPolicy
+
+```php
+class MeetingPackPolicy
+{
+    public function viewAny(User $auth): bool
+    {
+        return $auth->role === UserRole::Admin;
+    }
+
+    public function view(User $auth): bool
+    {
+        return $auth->role === UserRole::Admin;
+    }
+
+    public function create(User $auth): bool
+    {
+        return $auth->role === UserRole::Admin;
+    }
+
+    // update / delete / publish / archive / unarchive も同じ
+}
+```
+
+MeetingPackは「**どの面談パックであってもadminだけ許可**」であり、対象のパック状態や所有者で認可結果が変わりません。そのため、Policyはロールだけを見ています。
+
+### Controllerでの利用
+
+```php
+$this->authorize('view', $plan);
+$this->authorize('create', MeetingPack::class);
+$this->authorize('update', $plan);
+$this->authorize('delete', $plan);
+$this->authorize('publish', $plan);
+$this->authorize('archive', $plan);
+$this->authorize('unarchive', $plan);
+```
+
+これは、ルートのadmin制限に加えて、**操作ごとの認可意図をController上で明示する**役割があります。
+
+### Policy登録について
+
+現状の `AuthServiceProvider::$policies` には `MeetingPack::class => MeetingPackPolicy::class` の明示登録はありません。
+
+ただし、LaravelのPolicy自動検出により、次の命名規約に一致します。
+
+```text
+App\Models\MeetingPack
+↓
+App\Policies\MeetingPackPolicy
+```
+
+そのため、`$this->authorize()` と `$user->can()` は利用できています。  
+既存実装でもすべてのModelを明示登録しているわけではなく、命名規約に沿うPolicyは自動検出される構成です。
+
+---
+
+## 3. FormRequestの `authorize()` による二重認可
+
+### MeetingPackの作成
+
+```php
+public function authorize(): bool
+{
+    return $this->user()?->can('create', MeetingPack::class) ?? false;
+}
+```
+
+### MeetingPackの更新
+
+```php
+public function authorize(): bool
+{
+    return $this->user()?->can('update', $this->route('plan')) ?? false;
+}
+```
+
+この実装は、資格管理の既存実装と一致しています。
+
+### Certificationの作成
+
+```php
+public function authorize(): bool
+{
+    return $this->user()?->can('create', Certification::class) ?? false;
+}
+```
+
+### Certificationの更新
+
+```php
+public function authorize(): bool
+{
+    return $this->user()?->can('update', $this->route('certification')) ?? false;
+}
+```
+
+したがって、MeetingPackの `StoreRequest` / `UpdateRequest` は、既存のCertificationと同じ書き方です。
+
+---
+
+# 二重認可はLaravelとしておかしくないか
+
+**おかしくありません。むしろLaravelで一般的かつ妥当な構成です。**
+
+各層で守る対象が異なります。
+
+| 層 | 判定対象 | 主な役割 |
+|---|---|---|
+| Route Middleware | ルート群・ロール | admin専用領域にstudent / coachを入れない |
+| Controllerの `authorize()` | 操作と対象モデル | 詳細・編集・削除・状態遷移などの操作可否を明示する |
+| FormRequestの `authorize()` | 更新系リクエスト | リクエスト処理前に操作権限を再確認する |
+| Policy | ドメイン上の認可規則 | 「誰が何をできるか」の判断を一元化する |
+
+FormRequestの `authorize()` は、`rules()` より先に実行されます。  
+そのため権限のない利用者に対して不要な入力バリデーションを実行せず、403として処理できます。
+
+例えばMeetingPackの更新では、以下の順に守られます。
+
+```text
+1. auth Middleware
+2. role:admin Middleware
+3. Route Model Binding
+4. UpdateRequest::authorize()
+5. UpdateRequest::rules()
+6. Controller::update()
+7. $this->authorize('update', $plan)
+8. UpdateAction
+```
+
+このように、Middlewareが第一線、FormRequestとControllerが操作単位の防御、Policyが判断本体です。
+
+---
+
+# MeetingPackでFormRequest認可がある／ない操作
+
+| 操作 | ルートMiddleware | FormRequest `authorize()` | Controller `authorize()` | Policy |
+|---|---:|---:|---:|---:|
+| 一覧 | `auth`, `role:admin` | `IndexRequest`であり | なし | `viewAny` |
+| 詳細 | `auth`, `role:admin` | なし | あり | `view` |
+| 作成画面 | `auth`, `role:admin` | なし | あり | `create` |
+| 登録 | `auth`, `role:admin` | あり | なし | `create` |
+| 編集画面 | `auth`, `role:admin` | なし | あり | `update` |
+| 更新 | `auth`, `role:admin` | あり | なし | `update` |
+| 削除 | `auth`, `role:admin` | なし | あり | `delete` |
+| 公開 | `auth`, `role:admin` | なし | あり | `publish` |
+| アーカイブ | `auth`, `role:admin` | なし | あり | `archive` |
+| 下書きへ戻す | `auth`, `role:admin` | なし | あり | `unarchive` |
+
+補足すると、登録・更新はFormRequestが認可を担当しているため、Controllerで同じ `authorize()` を呼んでいません。これはCertificationの `store` / `update` と同じです。
+
+---
+
+# 「Userだけを渡すPolicy」についての最終整理
+
+MeetingPackは対象モデルの状態・作成者・紐づく資格などを認可判定に使わず、adminかどうかだけを見ます。
+
+```php
+return $auth->role === UserRole::Admin;
+```
+
+そのため、`MeetingPackPolicy` が対象モデル引数を取らず、`User` だけで判定する実装は**機能的には正しい**です。
+
+他のPolicyは、たとえば以下のように対象モデルを見て判定するため、モデル引数を持ちます。
+
+```php
+public function view(User $auth, Certification $certification): bool
+{
+    return match ($auth->role) {
+        UserRole::Admin => true,
+        UserRole::Coach => $certification->coaches->contains('id', $auth->id),
+        UserRole::Student => $certification->status === CertificationStatus::Published,
+    };
+}
+```
+
+MeetingPackのようにロールだけで完結する場合でも、既存Policyとの署名統一のためモデルを受け取る設計はあります。しかし、**対象モデルを使わないのであれば、Userだけを受ける方針そのものはLaravelとして不自然ではありません。**
+
+最終的にMeetingPackの認可は、以下のように多層で正しく実装されています。
+
+```text
+Route: admin領域へのアクセスを制限
+  ↓
+FormRequest: 登録・更新の操作権限を確認
+  ↓
+Controller: 画面表示・削除・状態遷移の操作権限を確認
+  ↓
+Policy: adminロールだけを許可
+```
