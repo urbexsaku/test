@@ -1,63 +1,65 @@
-	S-B-02 面談パックのマスタ管理																									
-	1. 基本設計書																									
-	Route,Controller																									
-	画面名称・動作	HTTPメソッド	パス	ルート先コントローラー	アクション	認証必須																				
-	面談パック一覧	GET	/admin/meeting-packs	MeetingPackController	index	〇																				
-	面談パック作成	GET	/admin/meeting-packs/create	MeetingPackController	create	〇																				
-	面談パック登録	POST	/admin/meeting-packs	MeetingPackController	store	〇																				
-	面談パック詳細	GET	/admin/meeting-packs/{plan}	MeetingPackController	show	〇																				
-	面談パック編集	GET	/admin/meeting-packs/{plan}/edit	MeetingPackController	edit	〇																				
-	面談パック更新	PATCH	/admin/meeting-packs/{plan}	MeetingPackController	update	〇																				
-	面談パック削除	DELETE	/admin/meeting-packs/{plan}	MeetingPackController	destroy	〇																				
-	面談パック公開	POST	/admin/meeting-packs/{plan}/publish	MeetingPackController	publish	〇																				
-	面談パックアーカイブ	POST	/admin/meeting-packs/{plan}/archive	MeetingPackController	archive	〇																				
-	面談パック再公開	POST	/admin/meeting-packs/{plan}/unarchive	MeetingPackController	unarchive	〇																				
-	2. テーブル仕様書																									
-	テーブル名	カラム名	型	PRIMARY KEY	NOT NULL	FOREIGN KEY	備考																			
-	meeting_packs	id	char(26)	〇	〇																					
-	meeting_packs	name	varchar(100)		〇																					
-	meeting_packs	description	text				nullable																			
-	meeting_packs	meeting_count	unsignedSmallInteger		〇																					
-	meeting_packs	price	unsignedInteger		〇																					
-	meeting_packs	stripe_price_id	varchar(255)				nullable																			
-	meeting_packs	status	varchar(20)		〇		デフォルト: draft																			
-	meeting_packs	sort_order	unsignedInteger		〇		デフォルト: 0																			
-	meeting_packs	created_by_user_id	char(26)		〇	〇	users.id																			
-	meeting_packs	updated_by_user_id	char(26)		〇	〇	users.id																			
-	meeting_packs	created_at	timestamp																							
-	meeting_packs	updated_at	timestamp																							
-	バリデーション設計書																									
-	ファイル名	フォーム	ルール	rules	attributes																					
-	MeetingPack/IndexRequest	keyword	任意、文字列、最大100文字	nullable, string, max:100	キーワード																					
-		status	任意、Draft/Published/Archivedを指定可能	nullable, Rule::enum(MeetingPackStatus::class)	ステータス																					
-	MeetingPack/StoreRequest	name	必須、文字列、最大100文字	required, string, max:100	パック名																					
-	MeetingPack/StoreRequest	description	任意、文字列、最大2000文字	nullable, string, max:2000	説明																					
-	MeetingPack/StoreRequest	meeting_count	必須、整数、1～100	required, integer, min:1, max:100	面談回数																					
-	MeetingPack/StoreRequest	price	必須、整数、0～1,000,000	required, integer, min:0, max:1000000	価格																					
-	MeetingPack/StoreRequest	stripe_price_id	任意、最大255文字	nullable, max: 255	Stripe Price ID																					
-	MeetingPack/StoreRequest	sort_order	任意、整数、最小0	nullable, integer, min:0	表示順																					
-	MeetingPack/UpdateRequest	name	必須、文字列、最大100文字	required, string, max:100	パック名																					
-	MeetingPack/UpdateRequest	description	任意、文字列、最大2000文字	nullable, string, max:2000	説明																					
-	MeetingPack/UpdateRequest	meeting_count	必須、整数、1～100	required, integer, min:1, max:100	面談回数																					
-	MeetingPack/UpdateRequest	price	必須、整数、0～1,000,000	required, integer, min:0, max:1000000	価格																					
-	MeetingPack/UpdateRequest	stripe_price_id	任意、最大255文字	nullable, max: 255	Stripe Price ID																					
-	MeetingPack/UpdateRequest	sort_order	任意、整数、最小0	nullable, unsignedInteger, min:0	表示順																					
-	Model / Policy																									
-	Model	Policy	判定内容																							
-	MeetingPack	MeetingPackPolicy	role（admin）のみ判定																							
-	Action																									
-	対象	Action	処理	Exception / HTTP																						
-	MeetingPack	IndexAction	面談パック一覧を取得。パック名・ステータスで絞り込み、公開中を優先し、sort_order 昇順、同値の場合は作成日時降順で並び替え、20件/ページで取得	—																						
-	MeetingPack	ShowAction	指定された面談パックの詳細を取得。基本情報・メタ情報を表示するためのデータを取得する。購入履歴はS-A-03で対応する。	—																						
-	MeetingPack	StoreAction	面談パックを登録。入力されたパック名、説明、面談回数、価格、Stripe Price ID、表示順等を設定し、ステータスを下書きに設定	—																						
-	MeetingPack	UpdateAction	指定された面談パックを更新。パック名、説明、面談回数、価格、Stripe Price ID、表示順等の基本情報を更新し、ステータスは変更しない	—																						
-	MeetingPack	DestroyAction	指定された面談パックを削除。公開中の場合は削除せず、409 Conflictを返す	MeetingPackNotDeletableException：公開中の削除 → 409 Conflict「公開中の面談パックは削除できません。」																						
-	MeetingPack	PublishAction	指定された面談パックを公開中に変更。現在のステータスが下書きの場合のみ変更し、それ以外の状態からの遷移は409 Conflictを返す	MeetingPackInvalidTransitionException：公開中・アーカイブからの状態遷移 → 409 Conflict「下書き状態の面談パックのみ公開できます。」																						
-	MeetingPack	ArchiveAction	指定された面談パックをアーカイブに変更。現在のステータスが公開中の場合のみ変更し、それ以外の状態からの遷移は409 Conflictを返す	MeetingPackInvalidTransitionException：下書き・アーカイブからの状態遷移 → 409 Conflict「公開中の面談パックのみアーカイブできます。」																						
-	MeetingPack	UnarchiveAction	指定された面談パックを下書きに変更。現在のステータスがアーカイブの場合のみ変更し、それ以外の状態からの遷移は409 Conflictを返す	MeetingPackInvalidTransitionException：下書き・公開中からの状態遷移 → 409 Conflict「アーカイブ済みの面談パックのみ下書きにできます。」																						
-	状態遷移設計書																									
-	現在状態	操作	遷移後状態	認可																						
-	Draft	Publish	Published	管理者																						
-	Published	Archive	Archived	管理者																						
-	Archived	Unarchive	Draft	管理者																						
-	上記以外は409																									
+	S-B-03 プランのマスタ管理																								
+	1. 基本設計書																								
+	Route,Controller																								
+	画面名称・動作	HTTPメソッド	パス	ルート先コントローラー	アクション	認証必須																			
+	プラン一覧	GET	/admin/plans	PlanController	index	〇																			
+	プラン作成	GET	/admin/plans/create	PlanController	create	〇																			
+	プラン登録	POST	/admin/plans	PlanController	store	〇																			
+	プラン詳細	GET	/admin/plans/{plan}	PlanController	show	〇																			
+	プラン編集	GET	/admin/plans/{plan}/edit	PlanController	edit	〇																			
+	プラン更新	PATCH	/admin/plans/{plan}	PlanController	update	〇																			
+	プラン削除	DELETE	/admin/plans/{plan}	PlanController	destroy	〇																			
+	プラン公開	POST	/admin/plans/{plan}/publish	PlanController	publish	〇																			
+	プランアーカイブ	POST	/admin/plans/{plan}/archive	PlanController	archive	〇																			
+	プラン再公開	POST	/admin/plans/{plan}/unarchive	PlanController	unarchive	〇																			
+																									
+	2. テーブル仕様書	作成済																							
+	テーブル名	カラム名	型	PRIMARY KEY	NOT NULL	FOREIGN KEY	備考																		
+	plans	id	char(26)	〇	〇		ULID																		
+	plans	name	varchar(100)		〇		プラン名																		
+	plans	description	text				nullable																		
+	plans	duration_days	unsignedSmallInteger		〇		期間（日）																		
+	plans	default_meeting_quota	unsignedSmallInteger		〇		初回面談回数																		
+	plans	status	varchar(20)		〇		デフォルト: draft																		
+	plans	sort_order	unsignedInteger		〇		デフォルト: 0																		
+	plans	created_by_user_id	char(26)		〇	〇	users.id 作成者																		
+	plans	updated_by_user_id	char(26)		〇	〇	users.id 最終更新者																		
+	plans	created_at	timestamp																						
+	plans	updated_at	timestamp																						
+																									
+	バリデーション設計書																								
+	ファイル名	フォーム	ルール	rules	attributes																				
+	Plan/IndexRequest	keyword	任意、文字列、最大100文字	nullable, string, max:100	キーワード																				
+	Plan/IndexRequest	status	任意、Draft/Published/Archivedを指定可能	nullable, Rule::enum(PlanStatus::class)	ステータス																				
+	Plan/StoreRequest	name	必須、文字列、最大100文字	required, string, max:100	プラン名																				
+	Plan/StoreRequest	description	任意、文字列、最大2000文字	nullable, string, max:2000	説明																				
+	Plan/StoreRequest	duration_days	必須、整数、1～3650	required, integer, min:1, max:3650	受講期間																				
+	Plan/StoreRequest	default_meeting_quota	必須、整数、0～1000	required, integer, min:0, max:1000	面談回数																				
+	Plan/StoreRequest	sort_order	任意、整数、最小0	nullable, integer, min:0	表示順																				
+	Plan/UpdateRequest	name	必須、文字列、最大100文字	required, string, max:100	プラン名																				
+	Plan/UpdateRequest	description	任意、文字列、最大2000文字	nullable, string, max:2000	説明																				
+	Plan/UpdateRequest	duration_days	必須、整数、1～3650	required, integer, min:1, max:3650	受講期間																				
+	Plan/UpdateRequest	default_meeting_quota	必須、整数、0～1000	required, integer, min:0, max:1000	面談回数																				
+	Plan/UpdateRequest	sort_order	任意、整数、最小0	nullable, integer, min:0	表示順																				
+																									
+	Model / Policy																								
+	Model	Policy	判定内容																						
+	Plan	PlanPolicy	role（admin）のみ判定																						
+																									
+	Action																								
+	対象	Action	処理	Exception / HTTP																					
+	Plan	IndexAction	プラン一覧を取得。キーワード・ステータスで絞り込み、既存のordered()による並び順を利用する	—																					
+	Plan	ShowAction	指定されたプランの詳細、紐付く受講生、作成者・最終更新者等の表示に必要なデータを取得する	—																					
+	Plan	StoreAction	プランを登録。入力されたプラン情報を設定し、作成者・最終更新者を設定する	—																					
+	Plan	UpdateAction	指定されたプランを更新。プラン情報を更新し、最終更新者を設定する	—																					
+	Plan	DestroyAction	指定されたプランの削除可否を確認し、削除可能な場合のみプランを削除する。受講生が紐付いている場合、公開中・アーカイブの場合は削除しない	PlanNotDeletableException：削除不可 → 409 Conflict																					
+	Plan	PublishAction	指定されたプランを公開中に変更。現在のステータスが下書きの場合のみ変更し、それ以外の状態からの遷移は409 Conflictを返す	PlanInvalidTransitionException：許容されない状態遷移 → 409 Conflict																					
+	Plan	ArchiveAction	指定されたプランをアーカイブに変更。現在のステータスが公開中の場合のみ変更し、それ以外の状態からの遷移は409 Conflictを返す	PlanInvalidTransitionException：許容されない状態遷移 → 409 Conflict																					
+	Plan	UnarchiveAction	指定されたプランを下書きに変更。現在のステータスがアーカイブの場合のみ変更し、それ以外の状態からの遷移は409 Conflictを返す	PlanInvalidTransitionException：許容されない状態遷移 → 409 Conflict																					
+																									
+	状態遷移設計書																								
+	現在状態	操作	遷移後状態	認可																					
+	Draft	Publish	Published	管理者																					
+	Published	Archive	Archived	管理者																					
+	Archived	Unarchive	Draft	管理者																					
+	上記以外はすべて409																								
