@@ -1,0 +1,11 @@
+// ========================================
+// 通知 — 受講生・コーチ共有
+// ========================================
+Route::middleware(['auth', 'role:student,coach', 'active-learning'])
+    ->prefix('notifications')
+    ->name('notifications.')
+    ->group(function () {
+        Route::get('', [NotificationController::class, 'index'])->name('index');
+        Route::post('{notification}/read', [NotificationController::class, 'markAsRead'])->name('markAsRead');
+        Route::post('read-all', [NotificationController::class, 'markAllAsRead'])->name('markAllAsRead');
+    });
