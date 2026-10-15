@@ -1,95 +1,126 @@
-	S-B-03 プランのマスタ管理																								
-【1. 要件】																									
-No	要件																								
-1	管理者はプランの一覧を確認できる																								
-2	プラン一覧ではプラン名によるキーワード検索、ステータスによる絞り込み、ページネーションができる																								
-3	プラン一覧には各プランの契約中受講生数を表示する																								
-4	管理者はプランを新規登録できる																								
-5	新規登録時のステータスは下書きとする																								
-6	管理者はプランの基本情報を編集できる																								
-7	編集画面ではステータスを変更しない																								
-8	管理者はプランを公開できる																								
-9	管理者は公開中のプランをアーカイブできる																								
-10	管理者はアーカイブ済みのプランを下書きに戻せる																								
-11	不正なステータス遷移は実行できない																								
-12	受講生との紐付きを壊すプラン削除はできない																								
-13	管理者はプラン詳細で基本情報、紐付く受講生、作成者・最終更新者・日時を確認できる																								
-14	プラン管理機能は管理者のみ利用できる																								
-15	アーカイブ済みプランは招待・延長時の選択肢から除外する																								
-16	既存のプラン参照は維持し、アーカイブによって既存データとの紐付きを壊さない																								
+	S-B-04 通知基盤（アプリ内＋メール）																								
+	1. 要件																								
+	区分	要件																							
+	通知一覧	受講生・コーチがサイドバーの「通知」から自分宛の通知一覧を確認できる																							
+	通知発火	業務イベント発生時に対象ユーザーへアプリ内通知とメールで知らせる																							
+	既読化	通知をクリックすると既読化し、関連する業務画面へ遷移する																							
+	一括既読	未読通知をまとめて既読化できる																							
+	認可	他人宛の通知は閲覧・既読化できない																							
+	配信対象	利用状態やロールに応じて通知の受信対象を制御する																							
+	対象ロール	受講生・コーチを通知対象とし、管理者向け通知は本MVPでは扱わない																							
+	ページネーション	通知一覧をページ分割して表示できる																							
+	通知種別	種別の異なる通知を一覧に表示し、通知クリック時は種別に応じた関連画面へ遷移する																							
+	画面	既存resources/views/notifications/配下の画面を使用し、本チケットでは画面変更を行わない																							
+	ルーティング	GET /notifications、POST /notifications/{notification}/read、POST /notifications/read-allを提供する																							
+	メール	対象ユーザーへ業務イベントに応じたメールを送信する																							
 																									
-【2. 仕様仮説】																									
-No	項目	仕様仮説	情報元																						
-1	一覧件数	20件/ページ	S-B-02の一覧ページネーション仕様																						
-2	検索	プラン名の部分一致	S-B-03要件：プラン名キーワード検索																						
-3	ステータス	下書き・公開中・アーカイブ済み	S-B-03要件：ステータスによる絞り込み／既存PlanStatus																						
-4	新規登録	登録時は下書き	S-B-03要件：新規登録時はdraft／既存create.blade.php																						
-5	編集	名前・説明・期間・初回面談回数・表示順を編集可能	S-B-03要件：編集項目／既存edit.blade.php																						
-6	ステータス編集	編集フォームでは変更せず、専用操作で変更	既存edit.blade.php：ステータス入力項目なし／既存show.blade.phpの専用操作																						
-7	ステータス遷移	下書き→公開中、公開中→アーカイブ済み、アーカイブ済み→下書きのみ許可	既存show.blade.phpの操作UI／S-B-03要件のライフサイクル																						
-8	削除	下書きかつ受講生未紐付きの場合のみ削除可能とする想定	既存show.blade.phpの削除確認文																						
-9	削除制限	公開中・アーカイブ済み、または受講生紐付きのプランは削除不可とする想定	既存show.blade.phpの削除確認文＋S-B-03要件：削除制限																						
-10	削除エラー	削除できない状態の場合は409 Conflictを返す想定	S-B-03要件：削除制限＋S-B-02の409 Conflict設計																						
-11	状態遷移エラー	許容されない状態遷移の場合は409 Conflictを返す想定	S-B-03要件：不正な状態遷移を許可しない＋S-B-02の409 Conflict設計																						
-12	期間	1～3650日	既存create.blade.php／edit.blade.phpの入力制約																						
-13	初回面談回数	0～1000回	既存create.blade.php／edit.blade.phpの入力制約																						
-14	表示順	0以上の整数、上限なし	既存create.blade.php／edit.blade.phpの入力制約																						
-15	プラン名	必須、100文字以内	既存create.blade.php／edit.blade.phpの入力制約																						
-16	説明	任意、2000文字以内	既存create.blade.php／edit.blade.phpの入力制約																						
+	2. 仕様仮説																								
+	項目	現時点の仕様仮説	根拠・確認状況																						
+	通知一覧	認証ユーザー自身の通知のみ一覧表示する	チケット記載・既存通知画面																						
+	通知データ	Laravel標準のDatabase Notificationを利用する	notification-row.blade.phpでDatabaseNotificationを型指定																						
+	通知保存先	notificationsテーブルを使用する	既存画面がDatabase Notificationを参照																						
+	通知順	通知日時の降順で新しい通知から表示する	通知一覧としての想定・既存画面																						
+	既読状態	read_atがNULLの場合を未読、値ありの場合を既読とする	notification-row.blade.phpでread_at === nullを判定																						
+	既読通知	既読済み通知も一覧に表示する	既読・未読の表示切替あり・通知削除はスコープ外																						
+	未読タブ	全件と未読のみを切り替えて表示する	既存index.blade.phpに全件・未読のみのタブUIあり																						
+	個別既読	本人の通知のみ既読化し、既読化後に関連画面へ遷移する	チケット記載・既存notification-row.blade.php																						
+	一括既読	本人の未読通知をまとめて既読化する	チケット記載・既存index.blade.php																						
+	他人の通知	他人の通知は一覧表示・既読化ともに不可とする	チケット記載																						
+	通知クリック	既存notification-row.blade.phpではPOSTフォームで既読化する構成	既存BladeにmarkAsReadへのPOSTフォームあり																						
+	通知詳細	通知詳細画面で通知本文を表示する	既存show.blade.php																						
+	遷移先	通知データの種別等に応じて関連業務画面へ遷移する	既存Bladeにnotification_typeの判定あり																						
+	通知種別	複数の通知種別を扱う	既存Bladeに複数のnotification_typeが定義されている																						
+	通知発火	業務イベント発生時にLaravel Notificationを利用してDatabase＋Mailへ通知する	Laravel Notification基盤・User::Notifiableは既存																						
+	メール	業務通知NotificationのtoMail()でメールを送信する	既存ResetPasswordNotificationでMailMessageを利用																						
+	メール送信	同期処理でメールを送信する	スコープ外に「メール配信のキュー非同期化」と記載																						
+	通知対象	受講生・コーチを対象とし、管理者はMVP対象外とする	チケット記載																						
+	利用状態	利用状態に応じて通知対象から除外する	チケット記載・具体的条件は要確認																						
+	通知削除	通知削除機能は提供せず、既読化のみとする	スコープ外																						
+	通知設定	通知種別ごとのON/OFF設定は提供しない	スコープ外																						
+	リアルタイム通知	リアルタイムpush・通知ポップオーバーによる通知配信は本チケットでは実装しない	スコープ外																						
+	管理者通知	管理者向け通知はMVPでは提供しない	スコープ外																						
+	面談リマインダー	面談リマインダー通知は対象外とする	スコープ外																						
+	初期データ	固定の受講生・コーチに既読・未読、複数種別の通知を投入する	チケット記載																						
 																									
-【3. 要確認事項】																									
-No	確認事項																								
-1	"削除可能条件は「下書きかつ受講生未紐付き」のみか
-受講生が紐付いていないアーカイブ済みプランを削除可能とするか"	OK																							
-2	"一覧
-①ページネーション件数を20件/ページとして確定するか
-②面談パック同様に、公開中を優先し、sort_order 昇順、同値の場合は作成日時降順で並び替えとするか"	OK																							
-3	削除不可時の409メッセージ「」																								
-4	"不正なステータス遷移時の409メッセージ
-下書き→公開中「下書き状態のプランのみ公開できます。」
-公開中→アーカイブ「公開中のプランのみアーカイブできます。」
-アーカイブ→下書き「アーカイブ済みのプランのみ下書きにできます。」"	OK																							
-5	ステータス遷移の許容範囲は「下書き→公開中、公開中→アーカイブ、アーカイブ→下書き」	OK																							
+	3. 要確認事項																								
+	No.	確認事項	PM回答																						
+	1	通知一覧は通知日時の降順（新しい通知から）で表示し、1ページあたりの表示件数は他一覧と同じ20件/ページとしてよいか。	OK																						
+	2	通知種別ごとの発火イベント・通知対象・メール件名・本文について、別表の仮設計の内容で問題ないか。	"終了承認時の通知は実装不要です。チャットメッセージ受信時は特に問題ないです。
+Q&A への回答投稿時について、質問を投稿した受講生自身がメッセージ送信時は通知しないようにしてください。
+面談予約時は担当コーチへのみ通知するようにしてください。
+面談キャンセル時はキャンセルした人の相手方へのみ通知するようにしてください。
+メール件名は「【Certify LMS】」で始まる形にしてもらえればと思います。"																						
+	3	通知対象外は、退会済（withdrawn）のユーザーでよいか	「受講中」でないユーザー（退会済・修了済・招待中）も対象外																						
+	4	通知機能の実装方法	"通知データについては遷移先のルート名とパラメータを保存して利用する形をおすすめします。
+遷移先が存在しない場合は、通知一覧へフォールバックする方針は特に問題ないです。"																						
+	5	メール送信に失敗した場合、アプリ内通知の登録は成功扱いとするか、それともメール失敗時にアプリ内通知の登録も取り消すか。	未回答																						
+	7	管理者の通知機能は本チケットの対象外なので、403が返ることは問題ないか																							
 																									
-【4. 既存コード調査で確認した内容】																									
-No	対象	確認内容																							
-1	Planモデル	Planモデルは既に存在する																							
-2	PlanStatus	下書き・公開中・アーカイブ済みの3状態が既に定義されている																							
-3	plansテーブル	id/name/description/duration_days/default_meeting_quota/status/sort_order/created_by_user_id/updated_by_user_id等が存在する																							
-4	プラン名	plans.nameはvarchar(100)かつNOT NULL																							
-5	説明	plans.descriptionはnullable																							
-6	期間	plans.duration_daysはunsignedSmallInteger																							
-7	初回面談回数	plans.default_meeting_quotaはunsignedSmallInteger																							
-8	ステータス	plans.statusはvarchar(20)かつデフォルトdraft																							
-9	表示順	plans.sort_orderはunsignedIntegerかつデフォルト0																							
-10	作成者	created_by_user_idでusers.idを参照する																							
-11	最終更新者	updated_by_user_idでusers.idを参照する																							
-12	一覧順	Plan::ordered()でsort_order昇順、created_at降順に並べる既存処理がある																							
-13	リレーション	Planにはusers()、createdBy()、updatedBy()、userPlanLogs()等のリレーションが存在する																							
-14	管理画面Blade	resources/views/plan/management/配下にindex/create/edit/showのBladeが存在する																							
-15	新規登録画面	名前100文字、説明2000文字、期間1～3650、初回面談回数0～1000、表示順0以上の入力UIが存在する																							
-16	新規登録画面	新規登録時は下書きで開始する旨が画面上に定義されている																							
-17	編集画面	ステータス変更項目は存在せず、ステータスは専用操作で変更する構成になっている																							
-18	詳細画面	下書き→公開中、公開中→アーカイブ済み、アーカイブ済み→下書きの操作UIが存在する																							
-19	詳細画面	受講生一覧として名前・メールアドレス・有効期限・残り面談回数を表示する構成がある																							
-20	詳細画面	作成者・最終更新者・作成日時・更新日時を表示する構成がある																							
-21	詳細画面	削除確認文では「下書きかつ受講者未紐付きの場合のみ削除可能」とされている																							
-22	招待処理	招待時のプラン選択では公開中のプランのみを対象としている																							
-23	延長処理	延長時のプラン選択でも公開中のプランのみを対象としている																							
-24	延長処理	公開中でないプランを指定した場合はPlanNotPublishedExceptionを使用する既存処理がある																							
-25	Seeder	下書き・公開中・アーカイブ済みの初期プランデータが用意されている																							
-26	Seeder	削除制限を確認できるよう受講生が紐付いたプランが初期データに含まれている																							
-27	管理Controller	プラン管理用Controllerは現時点では存在しない																							
-28	管理FormRequest	プラン管理用FormRequestは現時点では存在しない																							
-29	管理Policy	プラン管理用Policyは現時点では存在しない																							
-30	管理Action	プラン管理用Actionは現時点では存在しない																							
-31	管理Route	admin.plans.*のルートは現時点では存在せず、Blade側から参照されているため404となる状態																							
-32	対象外	料金情報、招待時のプラン割当、プラン延長、自動卒業、プラン履歴表示、期限計算、受講生・コーチ側のプラン情報、ドラッグ＆ドロップによる並び替えは本チケットの対象外																							
-【5. 確定仕様】																									
-No	項目	仕様																							
-1	新規登録	プラン作成時のステータスはdraft																							
-2	編集	ステータスは編集フォームから変更しない																							
-3	招待・延長	公開中publishedのプランのみ選択対象																							
-4	アーカイブ	既存のプラン参照を維持したまま招待・延長の選択対象から除外																							
-5	管理権限	プラン管理機能は管理者のみ利用可能																							
-6	ステータス	PlanStatusのdraft/published/archivedを使用																							
+	4. 既存コード調査で確認																								
+No.	調査事項	確認内容	確認結果																						
+1	Userモデル	通知機能に必要なNotifiableトレイトの有無	UserモデルでIlluminate\Notifications\Notifiableをuseしている。Laravel標準のnotifications()/unreadNotifications()等を利用できる状態																						
+2	Userモデル	通知のBroadcastチャンネル定義	receivesBroadcastNotificationsOn()が実装され、notifications.{userId}を返す。ただしリアルタイムpushはS-B-04スコープ外																						
+3	通知モデル	Laravel DatabaseNotificationの利用状況	notification-row.blade.phpでIlluminate\Notifications\DatabaseNotificationを型指定しており、Database Notificationを前提とした画面が存在																						
+4	通知テーブル	notificationsテーブルのmigration	通知用migrationは既存実装に存在せず、S-B-04で新規作成が必要																						
+5	通知Controller	通知一覧・既読化・一括既読Controller	NotificationControllerは既存せず、S-B-04で新規作成が必要																						
+6	通知ルート	GET /notifications	既存routes/web.phpにnotifications.indexのルートは存在せず、S-B-04で追加が必要																						
+7	個別既読ルート	POST /notifications/{notification}/read	既存ルートは存在せず、既存notification-row.blade.phpからnotifications.markAsReadを参照している状態																						
+8	一括既読ルート	POST /notifications/read-all	既存ルートは存在せず、既存index.blade.phpからnotifications.markAllAsReadを参照している状態																						
+9	通知Policy	本人の通知のみ閲覧・既読化するPolicy	NotificationPolicyは既存せず、認可処理の新規実装が必要																						
+10	通知一覧画面	index.blade.php	既存resources/views/notifications/index.blade.phpに存在。未読件数、全件既読、全件/未読タブ、一覧、ページネーション表示を想定した画面構成																						
+11	通知詳細画面	show.blade.php	既存resources/views/notifications/show.blade.phpに存在。通知種別・タイトル・本文・受信日時を表示																						
+12	通知行	notification-row.blade.php	既存。未読/既読の表示切替、通知種別アイコン、タイトル、メッセージ、相対日時、markAsRead POSTフォームを実装																						
+13	通知ポップオーバー	notification-popover.blade.php	既存。全件/未読タブ、全件既読、通知一覧、すべての通知を見る導線のUI骨組みが存在																						
+14	TopBar	通知ベルと未読バッジ	既存topbar.blade.phpに通知ベルとnotification-popoverのincludeあり。ただしnotifications.indexルートが存在するときだけ表示する実装																						
+15	未読バッジ	NotificationBadgeComposer	既存app/View/Composers/NotificationBadgeComposer.phpでunreadNotifications()->count()を取得。notifications.indexルート未登録時はDBを参照せず0を返す																						
+16	View Composer登録	AppServiceProvider	既存AppServiceProviderでNotificationBadgeComposerをtopbarに登録済み																						
+17	受講生サイドバー	通知導線	既存sidebar-student.blade.phpにnotifications.indexへの「通知」項目が存在																						
+18	コーチサイドバー	通知導線	既存sidebar-coach.blade.phpにnotifications.indexへの「通知」項目が存在																						
+19	管理者サイドバー	通知導線	既存sidebar-admin.blade.phpにもnotifications.indexへの「通知」項目が存在。チケットでは管理者通知はMVP対象外のため対応要確認																						
+20	通知種別	既存画面で定義されている種別	chat_message_received、qa_reply_received、completion_approved、meeting_reserved、meeting_canceled、meeting_reminder、admin_announcement等が既存Bladeのicon判定に定義されている																						
+21	通知メール	既存Notification実装	ResetPasswordNotificationがapp/Notifications/Auth/に存在し、MailMessageを利用したメール通知の実装例として利用可能																						
+22	メール通知テスト	既存テスト	ResetPasswordNotificationTestでtoMail()のMailMessage生成をテストしている。業務通知のメールテストを追加する際の既存パターンとして利用可能																						
+23	Notification Facade	既存テストでの利用	PasswordResetTestでNotification::fake()を利用しており、通知発火テストの既存パターンがある																						
+24	EventServiceProvider	既存イベント通知	RegisteredイベントにSendEmailVerificationNotificationが登録されている。既存Event/Listener構成を利用可能																						
+25	認証	通知ルートの認証	既存routes/web.phpでは認証後ルートをauth middleware groupで管理している。通知ルートも認証必須とする想定																						
+26	ロール制御	既存middleware	EnsureUserRoleによるrole middlewareが既存。通知一覧はstudent/coachを対象とし、adminを対象外とする場合のルート制御方法を要確認																						
+27	利用状態	UserStatus	既存UserモデルでUserStatusをCastしており、利用状態を保持している。通知対象外条件の実装に利用可能																						
+28	コーチ担当範囲	担当資格	既存User::assignedCertifications()およびcoachingCertificationIds()で担当資格を取得できる。通知対象コーチを決定する業務イベント側で利用可能																						
+29	業務イベント	Chat / QA / Meeting	既存Chat、QaThread/QaReply、Meeting等の業務機能が存在するため、通知発火処理を各イベント発生箇所へ組み込む必要がある																						
+30	非同期処理	メールQueue	既存通知・メール実装は存在するが、本チケットではメール配信のキュー非同期化を行わない																						
+31	JSON API	認証なしAPI	本チケットではJSON APIはスコープ外。既存通知ポップオーバーUIは存在するが、S-B-04ではリアルタイムpush/APIを新規提供しない																						
+32	初期データ	通知Seeder/Factory	通知専用のSeeder/Factoryは既存実装にないため、固定通知データ投入用のSeeder等を新規作成する必要がある																						
+33	ページネーション	既存通知画面	index.blade.phpでは$notifications->hasPages()と$notifications->links()を利用しており、ページネーション自体は画面側が対応済み。1ページ件数はController側未実装のため未確定																						
+34	遷移先	通知詳細・業務画面	既存show.blade.phpは通知本文を表示する画面。notification-row.blade.phpは既読化POSTのみで業務画面への遷移処理は未実装のため、S-B-04で設計・実装が必要																						
+																									
+	5. 確定仕様																								
+	区分	確定仕様																							
+	通知一覧	受講生・コーチは自分宛の通知一覧を確認できる																							
+	一覧対象	認証ユーザー本人の通知のみ表示し、他人宛の通知は表示しない																							
+	通知基盤	Laravel標準のDatabase Notificationを利用する																							
+	未読	notifications.read_atがNULLの通知を未読として扱う																							
+	既読	notifications.read_atに日時が設定された通知を既読として扱う																							
+	一覧表示	既存notifications/index.blade.phpを利用し、全件・未読のみを切り替えて表示する																							
+	ページネーション	通知一覧をページ分割して表示する																							
+	個別既読	本人の通知をクリックすると既読化し、関連する業務画面へ遷移する																							
+	一括既読	本人の未読通知をまとめて既読化する																							
+	他人の通知	他人宛の通知の閲覧・既読化を禁止する																							
+	通知発火	対象業務イベント発生時に対象ユーザーへアプリ内通知を作成する																							
+	メール	対象業務イベント発生時に対象ユーザーへメールを送信する																							
+	メール非同期化	メール配信のキュー非同期化は行わない																							
+	通知対象	受講生・コーチを対象とし、管理者向け通知は本MVPでは扱わない																							
+	利用状態	利用状態に応じて通知対象を制御する																							
+	通知種別	通知データにnotification_type等の種別情報を保持し、種別に応じて表示・遷移先を制御する																							
+	通知削除	通知の削除機能は提供せず、既読化のみ提供する																							
+	通知設定	通知種別ごとのON/OFF設定は提供しない																							
+	リアルタイム通知	リアルタイムpush・通知ポップオーバーによる新規通知配信は対象外とする																							
+	管理者一斉配信	管理者によるお知らせ一斉配信は対象外とする																							
+	管理者通知	管理者向け通知は本MVPでは対象外とする																							
+	面談リマインダー	面談リマインダー通知は対象外とする																							
+	モバイル通知	モバイルプッシュ通知は対象外とする																							
+	JSON API	認証なしJSON APIは提供しない																							
+	画面	既存resources/views/notifications/配下の画面を使用し、本チケットでは画面変更を行わない																							
+	通知ルート	GET /notifications、POST /notifications/{notification}/read、POST /notifications/read-allを提供する																							
+	初期データ	固定の受講生・コーチに既読・未読、複数種別の通知を投入し、一覧・ページネーション・通知遷移を確認できる状態とする																							
+	通知メール実装	既存ResetPasswordNotification等のLaravel Notification実装パターンを参考に業務通知を実装する																							
+	認可	通知操作時は本人の通知であることをサーバー側で検証する																							
