@@ -1,43 +1,27 @@
-区分	ファイル	テスト内容	テストメソッド名	実行内容	期待結果																				
-Unit	Enums/PlanStatusTest.php	プランのステータスEnumにdraft・published・archivedが定義されている	test_enum_lists_three_status_values	PlanStatus::cases()を確認する	draft・published・archivedの3種類が定義されている																				
-Unit	Enums/PlanStatusTest.php	プランのステータスEnumに日本語ラベルが定義されている	test_japanese_labels	各ステータスのlabel()を確認する	各ステータスに正しい日本語ラベルが設定されている																				
-Unit	Http/Requests/Plan/IndexRequestTest.php	フィルタ未指定でバリデーションを通過する	test_passes_with_empty_filters	空のパラメータでValidatorを実行する	バリデーションを通過する																				
-Unit	Http/Requests/Plan/IndexRequestTest.php	有効なstatusでバリデーションを通過する	test_passes_with_valid_status	PlanStatusの有効な値を指定してValidatorを実行する	バリデーションを通過する																				
-Unit	Http/Requests/Plan/IndexRequestTest.php	keywordが101文字でバリデーションエラーになる	test_fails_when_keyword_exceeds_max	101文字のkeywordを指定してValidatorを実行する	keywordのバリデーションエラーになる																				
-Unit	Http/Requests/Plan/IndexRequestTest.php	不正なstatusでバリデーションエラーになる	test_fails_when_status_invalid	存在しないstatusを指定してValidatorを実行する	statusのバリデーションエラーになる																				
-Unit	Http/Requests/Plan/StoreRequestTest.php	有効な値でバリデーションを通過する	test_validation_passes_with_full_valid_payload	必要な項目に有効な値を指定してValidatorを実行する	バリデーションを通過する																				
-Unit	Http/Requests/Plan/StoreRequestTest.php	不正な項目でバリデーションエラーになる	test_validation_fails	必須・文字数・数値範囲・型の不正値を指定する	指定した項目のバリデーションエラーになる																				
-Unit	Http/Requests/Plan/StoreRequestTest.php	非adminユーザーの場合、認可されない	test_authorize_returns_false_for_non_admin	非adminユーザーで認可処理を実行する	認可されない																				
-Unit	Http/Requests/Plan/UpdateRequestTest.php	有効な値でバリデーションを通過する	test_validation_passes_with_full_valid_payload	必要な項目に有効な値を指定してValidatorを実行する	バリデーションを通過する																				
-Unit	Http/Requests/Plan/UpdateRequestTest.php	不正な項目でバリデーションエラーになる	test_validation_fails_for_invalid_field	必須・文字数・数値範囲・型の不正値を指定する	指定した項目のバリデーションエラーになる																				
-Unit	Policies/PlanPolicyTest.php	adminのみ各abilityを許可する	test_admin_only_abilities_match_role_expectation	各abilityについてadmin・coach・studentの組み合わせを検証する	adminのみtrue、coach・studentはfalseになる																				
-Feature	Http/Plan/IndexTest.php	adminが一覧画面を表示できる	test_admin_can_view_index	adminで一覧画面へGETする	200系レスポンスとなり、一覧画面が表示される																				
-Feature	Http/Plan/IndexTest.php	studentが一覧画面にアクセスできない	test_student_cannot_access_admin_plans	studentで一覧画面へGETする	403になる																				
-Feature	Http/Plan/IndexTest.php	coachが一覧画面にアクセスできない	test_coach_cannot_access_admin_plans	coachで一覧画面へGETする	403になる																				
-Feature	Http/Plan/IndexTest.php	keywordでプランを絞り込める	test_keyword_filter_matches_name_only	nameがkeywordに一致するプランと一致しないプランを作成し、keywordを指定して一覧画面へGETする	keywordに一致するプランが表示され、一致しないプランは表示されない																				
-Feature	Http/Plan/IndexTest.php	statusでプランを絞り込める	test_status_filter_returns_only_matching_status	draft・published・archivedのプランを作成し、status=publishedを指定して一覧画面へGETする	publishedのプランのみ表示され、draft・archivedのプランは表示されない																				
-Feature	Http/Plan/IndexTest.php	公開中が優先され、sort_order昇順、同一sort_orderではcreated_at降順で取得できる	test_prioritizes_published_then_orders_by_sort_order_and_created_at	published・draft・archivedの面談パックを作成し、sort_orderとcreated_atを設定して一覧画面へGETする	publishedがdraftやarchivedより先に表示され、sort_order昇順、同一sort_orderではcreated_at降順で表示される																				
-Feature	Http/Plan/IndexTest.php	20件単位でページングされる	test_paginates_20_per_page	22件のプランを作成して一覧画面へGETする	1ページあたり20件となり、全22件が取得対象となる																				
-Feature	Http/Plan/StoreTest.php	管理者がプランを登録できる	test_admin_can_create_plan_as_draft	管理者でプラン登録リクエストを実行する	登録に成功し、ステータスがdraftで作成され、created_by_user_idとupdated_by_user_idに登録した管理者のIDが設定される																				
-Feature	Http/Plan/StoreTest.php	プラン登録時のバリデーション	test_required_fields_are_validated	必須項目を空にしてプラン登録リクエストを実行する	バリデーションエラーとなる																				
-Feature	Http/Plan/StoreTest.php	コーチはプランを登録できない	test_coach_cannot_create_plan	コーチでプラン登録リクエストを実行する	403 Forbiddenとなる																				
-Feature	Http/Plan/UpdateTest.php	管理者がプランを更新できる	test_admin_can_update_plan	管理者でプランのnameとdescriptionを更新する	更新に成功し、nameとdescriptionが更新され、updated_by_user_idに更新した管理者のIDが設定される																				
-Feature	Http/Plan/UpdateTest.php	更新時にステータスを変更できない	test_status_is_unchanged_even_if_payload_includes_status	公開中のプランにstatus=draftを含めて更新リクエストを実行する	リクエストに含めたstatusは反映されず、ステータスはpublishedのまま維持される																				
-Feature	Http/Plan/UpdateTest.php	コーチはプランを更新できない	test_coach_cannot_update	コーチでプランの更新リクエストを実行する	403 Forbiddenとなる																				
-Feature	Http/Plan/DestroyTest.php	draftかつ受講生未紐付きのプランを削除できる	test_admin_can_delete_draft_plan_without_students	管理者で受講生が紐づいていないdraftのプラン削除リクエストを実行する	HTTPリダイレクトとなり、対象レコードがDBから削除される																				
-Feature	Http/Plan/DestroyTest.php	受講生が紐づいているdraftのプランは削除できない	test_cannot_delete_draft_plan_with_students	管理者で受講生が紐づいているdraftのプラン削除リクエストを実行する	HTTP 409となり、対象レコードがDBに残る																				
-Feature	Http/Plan/DestroyTest.php	publishedのプランは削除できない	test_cannot_delete_published_plan	管理者でpublishedのプラン削除リクエストを実行する	HTTP 409となり、対象レコードがDBに残る																				
-Feature	Http/Plan/DestroyTest.php	archivedのプランは削除できない	test_cannot_delete_archived_plan	管理者でarchivedのプラン削除リクエストを実行する	HTTP 409となり、対象レコードがDBに残る																				
-Feature	Http/Plan/DestroyTest.php	コーチはプランを削除できない	test_coach_cannot_delete	コーチでdraftかつ受講生未紐付きのプラン削除リクエストを実行する	403 Forbiddenとなる																				
-Feature	Http/Plan/PublishTest.php	draftのプランを公開できる	test_admin_can_publish_draft_plan	管理者でdraftのプランに公開操作を実行する	HTTPリダイレクトとなり、ステータスがpublishedに遷移する																				
-Feature	Http/Plan/PublishTest.php	publishedのプランは公開できない	test_cannot_publish_already_published	管理者でpublishedのプランに公開操作を実行する	HTTP 409となる																				
-Feature	Http/Plan/PublishTest.php	archivedのプランは公開できない	test_cannot_publish_archived	管理者でarchivedのプランに公開操作を実行する	HTTP 409となる																				
-Feature	Http/Plan/PublishTest.php	コーチはプランを公開できない	test_coach_cannot_publish	コーチでプランに公開操作を実行する	403 Forbiddenとなる																				
-Feature	Http/Plan/ArchiveTest.php	publishedのプランをアーカイブできる	test_admin_can_archive_published_plan	管理者でpublishedのプランにアーカイブ操作を実行する	HTTPリダイレクトとなり、ステータスがarchivedに遷移する																				
-Feature	Http/Plan/ArchiveTest.php	draftのプランはアーカイブできない	test_cannot_archive_draft	管理者でdraftのプランにアーカイブ操作を実行する	HTTP 409となる																				
-Feature	Http/Plan/ArchiveTest.php	archivedのプランはアーカイブできない	test_cannot_archive_already_archived	管理者でarchivedのプランにアーカイブ操作を実行する	HTTP 409となる																				
-Feature	Http/Plan/ArchiveTest.php	コーチはプランをアーカイブできない	test_coach_cannot_archive	コーチでプランにアーカイブ操作を実行する	403 Forbiddenとなる																				
-Feature	Http/Plan/UnarchiveTest.php	archivedのプランをdraftに戻せる	test_admin_can_unarchive_archived_plan	管理者でarchivedのプランにアーカイブ解除操作を実行する	HTTPリダイレクトとなり、ステータスがdraftに遷移する																				
-Feature	Http/Plan/UnarchiveTest.php	publishedのプランはアーカイブ解除できない	test_cannot_unarchive_published	管理者でpublishedのプランにアーカイブ解除操作を実行する	HTTP 409となる																				
-Feature	Http/Plan/UnarchiveTest.php	draftのプランはアーカイブ解除できない	test_cannot_unarchive_already_draft	管理者でdraftのプランにアーカイブ解除操作を実行する	HTTP 409となる																				
-Feature	Http/Plan/UnarchiveTest.php	コーチはプランをアーカイブ解除できない	test_coach_cannot_unarchive	コーチでarchivedのプランにアーカイブ解除操作を実行する	403 Forbiddenとなる																				
+No	テストファイル（案）	テストケース名（案）	前提条件・入力	操作	期待結果																				
+1	tests/Feature/Http/Notification/IndexTest.php	test_authenticated_student_can_view_notification_index	認証済みの受講生に通知が登録されている	通知一覧画面にアクセスする	通知一覧画面が表示され、自分の通知が表示される																				
+2	tests/Feature/Http/Notification/IndexTest.php	test_authenticated_coach_can_view_notification_index	認証済みの講師に通知が登録されている	通知一覧画面にアクセスする	通知一覧画面が表示され、自分の通知が表示される																				
+3	tests/Feature/Http/Notification/IndexTest.php	test_notifications_are_ordered_by_latest	異なる作成日時の通知が複数登録されている	通知一覧画面にアクセスする	通知が作成日時の降順で表示される																				
+4	tests/Feature/Http/Notification/IndexTest.php	test_notification_index_paginates_twenty_items_per_page	認証ユーザーに21件以上の通知が登録されている	通知一覧画面にアクセスし、ページを切り替える	1ページ目に最大20件、次ページに残りの通知が表示される																				
+5	tests/Feature/Http/Notification/IndexTest.php	test_unread_tab_displays_only_unread_notifications	既読・未読の通知が登録されている	未読タブを選択する	未読の通知のみが表示される																				
+6	tests/Feature/Http/Notification/IndexTest.php	test_notification_index_does_not_display_other_users_notifications	認証ユーザーと他ユーザーの両方に通知が登録されている	通知一覧画面にアクセスする	認証ユーザー自身の通知のみが表示される																				
+7	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_updates_notification_read_at	認証ユーザー自身の未読通知が登録されている	通知の既読操作を行う	対象通知のread_atが設定される																				
+8	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_chat_room_for_chat_notification	未読通知のdataにroute「chat.show」と有効なroute_params（room）が設定されている	通知の既読操作を行う	通知が既読になり、該当するチャットルーム画面にリダイレクトされる																				
+9	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_qa_thread_for_qa_notification	未読通知のdataにroute「qa-board.show」と有効なroute_params（thread）が設定されている	通知の既読操作を行う	通知が既読になり、該当するQ&A詳細画面にリダイレクトされる																				
+10	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_meetings_index_for_reserved_notification	未読通知のdataにroute「meetings.index」と空のroute_paramsが設定されている	通知の既読操作を行う	通知が既読になり、面談一覧画面にリダイレクトされる																				
+11	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_meetings_index_for_canceled_notification	未読通知のdataにroute「meetings.index」と空のroute_paramsが設定されている	通知の既読操作を行う	通知が既読になり、面談一覧画面にリダイレクトされる																				
+12	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_falls_back_to_notification_index_for_invalid_route_data	未読通知のdataに遷移先routeの欠落・許可されていないroute・不正なroute_paramsのいずれかが設定されている	通知の既読操作を行う	例外が発生せず通知が既読になり、通知一覧画面にリダイレクトされる																				
+13	tests/Feature/Http/Notification/MarkAsReadTest.php	test_user_cannot_mark_another_users_notification_as_read	他ユーザーの通知が登録されている	認証ユーザーが他ユーザーの通知に対して既読操作を行う	認可エラーとなり、他ユーザーの通知は既読にならない																				
+14	tests/Feature/Http/Notification/MarkAllAsReadTest.php	test_mark_all_as_read_updates_only_authenticated_users_notifications	認証ユーザーと他ユーザーに未読通知が登録されている	すべて既読にする操作を行う	認証ユーザー自身の未読通知のみが既読になる																				
+15	tests/Feature/UseCases/Chat/StoreMessageActionTest.php	test_sending_chat_message_creates_notification_for_other_chat_members	チャットルームに複数のメンバーが参加している	メッセージを送信する	送信者以外の対象メンバーに通知が作成され、dataにroute「chat.show」と対象ルームのroute_params（room）が保存される																				
+16	tests/Feature/Http/QaBoard/CrudReplyTest.php	test_replying_to_own_question_does_not_create_notification	認証ユーザー自身が質問を投稿している	自分の質問に返信する	質問者向けの通知が作成されない																				
+17	tests/Feature/Http/QaBoard/CrudReplyTest.php	test_replying_to_another_users_question_creates_notification_for_questioner	他ユーザーが投稿した質問が存在する	質問に返信する	質問者に通知が作成され、dataにroute「qa-board.show」と対象質問のroute_params（thread）が保存される																				
+18	tests/Feature/Http/Meeting/MeetingControllerTest.php	test_meeting_reserved_notification_is_sent_to_assigned_coach_only	面談を予約する受講生と担当講師が存在する	面談を予約する	担当講師に通知が作成され、dataにroute「meetings.index」と空のroute_paramsが保存される。受講生には通知が作成されない																				
+19	tests/Feature/Http/Meeting/MeetingControllerTest.php	test_meeting_canceled_notification_is_sent_to_counterparty_only	面談の予約者と相手方が存在する	面談をキャンセルする	キャンセルしたユーザーの相手方に通知が作成され、dataにroute「meetings.index」と空のroute_paramsが保存される。キャンセルしたユーザーには通知が作成されない																				
+20	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_sent_to_in_progress_student	受講中の受講生が通知対象に含まれる	通知送信処理を実行する	受講中の受講生に通知が作成される																				
+21	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_sent_to_in_progress_coach	受講中の講師が通知対象に含まれる	通知送信処理を実行する	受講中の講師に通知が作成される																				
+22	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_not_sent_to_invited_user	招待中のユーザーが通知対象に含まれる	通知送信処理を実行する	招待中のユーザーに通知が作成されない																				
+23	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_not_sent_to_graduated_user	卒業済みのユーザーが通知対象に含まれる	通知送信処理を実行する	卒業済みのユーザーに通知が作成されない																				
+24	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_not_sent_to_withdrawn_user	退会済みのユーザーが通知対象に含まれる	通知送信処理を実行する	退会済みのユーザーに通知が作成されない																				
+25	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_not_sent_to_admin	管理者が通知対象に含まれる	通知送信処理を実行する	管理者に通知が作成されない																				
+26	tests/Feature/Unit/Notifications/NotificationMailTest.php	test_notification_mail_subjects_start_with_certify_lms_prefix	通知メールの件名を生成する	通知メールの件名を確認する	件名が「【Certify LMS】」で始まる																				
