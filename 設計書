@@ -1,65 +1,101 @@
-	S-B-03 プランのマスタ管理																								
+	S-B-04 通知基盤（アプリ内＋メール）			 																					
 	1. 基本設計書																								
 	Route,Controller																								
 	画面名称・動作	HTTPメソッド	パス	ルート先コントローラー	アクション	認証必須																			
-	プラン一覧	GET	/admin/plans	PlanController	index	〇																			
-	プラン作成	GET	/admin/plans/create	PlanController	create	〇																			
-	プラン登録	POST	/admin/plans	PlanController	store	〇																			
-	プラン詳細	GET	/admin/plans/{plan}	PlanController	show	〇																			
-	プラン編集	GET	/admin/plans/{plan}/edit	PlanController	edit	〇																			
-	プラン更新	PATCH	/admin/plans/{plan}	PlanController	update	〇																			
-	プラン削除	DELETE	/admin/plans/{plan}	PlanController	destroy	〇																			
-	プラン公開	POST	/admin/plans/{plan}/publish	PlanController	publish	〇																			
-	プランアーカイブ	POST	/admin/plans/{plan}/archive	PlanController	archive	〇																			
-	プラン再公開	POST	/admin/plans/{plan}/unarchive	PlanController	unarchive	〇																			
+	通知一覧	GET	/notifications	NotificationController	index	〇																			
+	通知既読化	POST	/notifications/{notification}/read	NotificationController	markAsRead	〇																			
+	全件既読	POST	/notifications/read-all	NotificationController	markAllAsRead	〇																			
 																									
-	2. テーブル仕様書	作成済																							
+	2. テーブル仕様書	未作成																							
 	テーブル名	カラム名	型	PRIMARY KEY	NOT NULL	FOREIGN KEY	備考																		
-	plans	id	char(26)	〇	〇		ULID																		
-	plans	name	varchar(100)		〇		プラン名																		
-	plans	description	text				nullable																		
-	plans	duration_days	unsignedSmallInteger		〇		期間（日）																		
-	plans	default_meeting_quota	unsignedSmallInteger		〇		初回面談回数																		
-	plans	status	varchar(20)		〇		デフォルト: draft																		
-	plans	sort_order	unsignedInteger		〇		デフォルト: 0																		
-	plans	created_by_user_id	char(26)		〇	〇	users.id 作成者																		
-	plans	updated_by_user_id	char(26)		〇	〇	users.id 最終更新者																		
-	plans	created_at	timestamp																						
-	plans	updated_at	timestamp																						
+	notifications	id	char(36)	〇	〇		ULID, 既存のDatabase Notificationを利用予定																		
+	notifications	type	varchar(255)				通知種別																		
+	notifications	notifiable_type	varchar(255)				通知対象モデル																		
+	notifications	notifiable_id	varchar(255)				通知対象ユーザー																		
+	notifications	data	text				通知データ																		
+	notifications	read_at	timestamp				既読日時。NULLの場合は未読																		
+	notifications	created_at	timestamp				通知作成日時																		
+	notifications	updated_at	timestamp				更新日時																		
 																									
-	バリデーション設計書																								
-	ファイル名	フォーム	ルール	rules	attributes																				
-	Plan/IndexRequest	keyword	任意、文字列、最大100文字	nullable, string, max:100	キーワード																				
-	Plan/IndexRequest	status	任意、Draft/Published/Archivedを指定可能	nullable, Rule::enum(PlanStatus::class)	ステータス																				
-	Plan/StoreRequest	name	必須、文字列、最大100文字	required, string, max:100	プラン名																				
-	Plan/StoreRequest	description	任意、文字列、最大2000文字	nullable, string, max:2000	説明																				
-	Plan/StoreRequest	duration_days	必須、整数、1～3650	required, integer, min:1, max:3650	受講期間																				
-	Plan/StoreRequest	default_meeting_quota	必須、整数、0～1000	required, integer, min:0, max:1000	面談回数																				
-	Plan/StoreRequest	sort_order	任意、整数、最小0	nullable, integer, min:0	表示順																				
-	Plan/UpdateRequest	name	必須、文字列、最大100文字	required, string, max:100	プラン名																				
-	Plan/UpdateRequest	description	任意、文字列、最大2000文字	nullable, string, max:2000	説明																				
-	Plan/UpdateRequest	duration_days	必須、整数、1～3650	required, integer, min:1, max:3650	受講期間																				
-	Plan/UpdateRequest	default_meeting_quota	必須、整数、0～1000	required, integer, min:0, max:1000	面談回数																				
-	Plan/UpdateRequest	sort_order	任意、整数、最小0	nullable, integer, min:0	表示順																				
+	バリデーション設計書	なし																							
 																									
-	Model / Policy																								
-	Model	Policy	判定内容																						
-	Plan	PlanPolicy	role（admin）のみ判定																						
+	Policy																								
+	Policy	判定内容																							
+	NotificationPolicy	viewAny：受講生・コーチに通知一覧の閲覧を許可する																							
+	NotificationPolicy	markAsRead：受講生・コーチであること、および対象通知が本人宛てであることを確認する																							
+	NotificationPolicy	markAllAsRead：受講生・コーチに一括既読化を許可する																							
 																									
 	Action																								
-	対象	Action	処理	Exception / HTTP																					
-	Plan	IndexAction	プラン一覧を取得。キーワード・ステータスで絞り込み、既存のordered()による並び順を利用する	—																					
-	Plan	ShowAction	指定されたプランの詳細、紐付く受講生、作成者・最終更新者等の表示に必要なデータを取得する	—																					
-	Plan	StoreAction	プランを登録。入力されたプラン情報を設定し、作成者・最終更新者を設定する	—																					
-	Plan	UpdateAction	指定されたプランを更新。プラン情報を更新し、最終更新者を設定する	—																					
-	Plan	DestroyAction	指定されたプランの削除可否を確認し、削除可能な場合のみプランを削除する。受講生が紐付いている場合、公開中・アーカイブの場合は削除しない	PlanNotDeletableException：削除不可 → 409 Conflict																					
-	Plan	PublishAction	指定されたプランを公開中に変更。現在のステータスが下書きの場合のみ変更し、それ以外の状態からの遷移は409 Conflictを返す	PlanInvalidTransitionException：許容されない状態遷移 → 409 Conflict																					
-	Plan	ArchiveAction	指定されたプランをアーカイブに変更。現在のステータスが公開中の場合のみ変更し、それ以外の状態からの遷移は409 Conflictを返す	PlanInvalidTransitionException：許容されない状態遷移 → 409 Conflict																					
-	Plan	UnarchiveAction	指定されたプランを下書きに変更。現在のステータスがアーカイブの場合のみ変更し、それ以外の状態からの遷移は409 Conflictを返す	PlanInvalidTransitionException：許容されない状態遷移 → 409 Conflict																					
+	対象	Action	処理																						
+	Notification	IndexAction	認証ユーザー自身の通知一覧を取得する。tabがunreadの場合は未読通知のみ取得し、ページネーションを行う																						
+	Notification	MarkAsReadAction	指定された通知を既読化する。通知の所有者であることをPolicyで確認する																						
+	Notification	MarkAllAsReadAction	認証ユーザー自身の未読通知をまとめて既読化する																						
+	Notification	SendNotificationAction	通知対象ユーザーとNotificationインスタンスを受け取り、通知対象ユーザーが受講中の受講生またはコーチであることを確認したうえで notify() を呼び出す。アプリ内通知とメール通知の配信はNotificationクラスに委譲する																						
 																									
-	状態遷移設計書																								
-	現在状態	操作	遷移後状態	認可																					
-	Draft	Publish	Published	管理者																					
-	Published	Archive	Archived	管理者																					
-	Archived	Unarchive	Draft	管理者																					
-	上記以外はすべて409																								
+	通知処理設計書																								
+	対象	処理	備考																						
+	アプリ内通知	業務イベント発生時に対象ユーザーへDatabase Notificationを作成する	通知種別ごとのNotificationクラスを利用する																						
+	メール通知	業務イベント発生時に対象ユーザーへメール通知する	Notificationクラスのmailチャネルを利用する。メール件名・本文は通知種別一覧を参照																						
+	通知発行	業務イベントからSendNotificationAction（追加案）を呼び出して通知を発行する	対象ユーザーの特定は各業務処理で行う。共通Actionで通知対象外条件を確認する		　																				
+	通知既読化	通知クリック時に既読化する	要件書に記載。所有者確認はPolicyで行う																						
+	通知遷移	通知クリック時に関連する業務画面へ遷移する	具体的な遷移先・決定方式は未確定																						
+	一括既読	本人の未読通知をまとめて既読化する	要件書に記載																						
+	通知対象	受講生・コーチ	管理者向け通知はMVP対象外																						
+	通知対象外条件	退会済み（withdrawn）のユーザーには通知を発行しない	退会状態の判定方法を既存Userモデル・Enumで確認して実装する																						
+	通知画面	既存resources/views/notifications/配下を利用する	本チケットでは画面変更なし																						
+	メール非同期化	メール配信のキュー非同期化は行わない	スコープ外。同期送信時のメール送信失敗時の扱いは確認する																						
+																									
+	Notification																								
+	ファイル名	通知種別	発火イベント	通知対象	通知対象外条件																				
+	ChatMessageReceivedNotification.php	chat_message_received	チャットメッセージ受信時 / Chat・StoreMessageAction	チャット相手	受講中（InProgress）でないユーザー（退会済・修了済・招待中）																				
+	QaReplyReceivedNotification.php	qa_reply_received	Q&Aへの回答投稿時 / QaReply・StoreAction	質問を投稿した受講生	受講中（InProgress）でないユーザー（退会済・修了済・招待中）、回答者本人が質問投稿者である場合																				
+	MeetingReservedNotification.php	meeting_reserved	面談予約時 / MeetingController・store	当該面談の担当コーチ	受講中（InProgress）でないユーザー（退会済・修了済・招待中）																				
+	MeetingCanceledNotification.php	meeting_canceled	面談キャンセル時 / MeetingController・cancel	キャンセルした人の相手方（受講生orコーチ）	受講中（InProgress）でないユーザー（退会済・修了済・招待中）																				
+																									
+	メッセージ内容																								
+	通知種別	アプリ内通知タイトル	アプリ内通知メッセージ	アプリ内通知本文	アプリ内通知遷移先	メール件名	メール本文																		
+	chat_message_received	新しいチャットメッセージがあります	新しいチャットメッセージを受信しました。	新しいチャットメッセージを受信しました。	対象のチャットルーム（chat.show）	【Certify LMS】チャット受信のお知らせ	"Certify LMS をご利用の皆様へ
+新しいチャットメッセージを受信しました。
+Certify LMS にログインして内容をご確認ください。
+心当たりがない場合は、このメールを破棄してください。
+Certify LMS 運営チーム"																		
+	qa_reply_received	Q&Aに回答がありました	投稿したQ&Aに回答がありました。	投稿したQ&Aに回答がありました。	対象の質問詳細（qa-board.show）	【Certify LMS】Q&A返信のお知らせ	"Certify LMS をご利用の皆様へ
+投稿したQ&Aに回答がありました。
+Certify LMS にログインして回答内容をご確認ください。
+心当たりがない場合は、このメールを破棄してください。
+Certify LMS 運営チーム"																		
+	meeting_reserved	面談が予約されました	面談が予約されました。	面談が予約されました。	面談一覧（coach.meetings.index）	【Certify LMS】面談予約のお知らせ	"Certify LMS をご利用の皆様へ
+面談が予約されました。
+Certify LMS にログインして面談の詳細をご確認ください。
+心当たりがない場合は、このメールを破棄してください。
+Certify LMS 運営チーム"																		
+	meeting_canceled	面談がキャンセルされました	予定されていた面談がキャンセルされました。	予定されていた面談がキャンセルされました。	"面談一覧
+受講生：meetings.index
+コーチ：coach.meetings.index"	【Certify LMS】面談キャンセルのお知らせ	"Certify LMS をご利用の皆様へ
+予定されていた面談がキャンセルされました。
+Certify LMS にログインして詳細をご確認ください。
+心当たりがない場合は、このメールを破棄してください。
+Certify LMS 運営チーム"																		
+																									
+	項目	仮設計	備考																						
+	通知対象	受講生・コーチ	通知種別ごとの詳細は通知種別一覧を参照																						
+	管理者への通知	対象外	MVP対象外																						
+	利用状態による通知対象外	未確定	利用状態・ロール等による具体的な条件はPM確認																						
+	メール通知	アプリ内通知と同時に送信	Notificationの配信チャネルとしてdatabase・mailを利用																						
+	メール文面	通知種別ごとに固定文面	件名・本文は通知種別一覧に記載																						
+	メール送信方式	同期送信	メール配信のキュー非同期化はスコープ外																						
+																									
+シーディング設計																									
+受講生用																									
+No.	通知種別	件数	既読	未読	確認内容																				
+1	chat_message_received	4	2	2	チャット通知の表示・チャットルームへの遷移																				
+2	qa_reply_received	9	4	5	Q&A回答通知の表示・質問詳細への遷移																				
+3	meeting_canceled	8	2	6	面談キャンセル通知の表示・面談一覧への遷移																				
+合計		21	8	13	既読・未読の混在、新着順の表示																				
+																									
+コーチ用																									
+No.	通知種別	件数	既読	未読	確認内容																				
+1	chat_message_received	2	1	1	チャット通知の表示・チャットルームへの遷移																				
+2	meeting_reserved	10	3	7	面談予約通知の表示・面談一覧への遷移																				
+3	meeting_canceled	9	4	5	面談キャンセル通知の表示・面談一覧への遷移																				
+合計		21	8	13	既読・未読の混在、新着順の表示																				
