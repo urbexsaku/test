@@ -21,16 +21,16 @@
 																									
 	Policy																								
 	Policy	判定内容																							
-	NotificationPolicy	viewAny：受講生・コーチに通知一覧の閲覧を許可する																							
-	NotificationPolicy	markAsRead：受講生・コーチであること、および対象通知が本人宛てであることを確認する																							
-	NotificationPolicy	markAllAsRead：受講生・コーチに一括既読化を許可する																							
+	NotificationPolicy	viewAny：認証ユーザーに通知一覧の閲覧を許可する																							
+	NotificationPolicy	markAsRead：対象通知が認証ユーザー本人宛てであることを確認する																							
+	NotificationPolicy	markAllAsRead：認証ユーザー自身の未読通知の一括既読化を許可する																							
 																									
 	Action																								
 	対象	Action	処理																						
-	Notification	IndexAction	認証ユーザー自身の通知一覧を取得する。tabがunreadの場合は未読通知のみ取得し、ページネーションを行う																						
-	Notification	MarkAsReadAction	指定された通知を既読化する。通知の所有者であることをPolicyで確認する																						
+	Notification	IndexAction	認証ユーザー自身の通知一覧を取得する。tabがunreadの場合は未読通知のみ取得し、新しい順に並べてページネーションを行う（1ページ20件）																						
+	Notification	MarkAsReadAction	指定された通知を既読化する。通知の所有者であることをPolicyで確認し、認証ユーザー本人の通知のみを操作する																						
 	Notification	MarkAllAsReadAction	認証ユーザー自身の未読通知をまとめて既読化する																						
-	Notification	SendNotificationAction	通知対象ユーザーとNotificationインスタンスを受け取り、通知対象ユーザーが受講中の受講生またはコーチであることを確認したうえで notify() を呼び出す。アプリ内通知とメール通知の配信はNotificationクラスに委譲する																						
+	Notification	SendNotificationAction	通知対象ユーザーとNotificationインスタンスを受け取り、通知対象ユーザーが受講中の受講生またはコーチであることを確認したうえでnotify()を呼び出す。アプリ内通知とメール通知の配信はNotificationクラスに委譲する																						
 																									
 	通知処理設計書																								
 	対象	処理	備考																						
@@ -47,55 +47,58 @@
 																									
 	Notification																								
 	ファイル名	通知種別	発火イベント	通知対象	通知対象外条件																				
-	ChatMessageReceivedNotification.php	chat_message_received	チャットメッセージ受信時 / Chat・StoreMessageAction	チャット相手	受講中（InProgress）でないユーザー（退会済・修了済・招待中）																				
-	QaReplyReceivedNotification.php	qa_reply_received	Q&Aへの回答投稿時 / QaReply・StoreAction	質問を投稿した受講生	受講中（InProgress）でないユーザー（退会済・修了済・招待中）、回答者本人が質問投稿者である場合																				
-	MeetingReservedNotification.php	meeting_reserved	面談予約時 / MeetingController・store	当該面談の担当コーチ	受講中（InProgress）でないユーザー（退会済・修了済・招待中）																				
-	MeetingCanceledNotification.php	meeting_canceled	面談キャンセル時 / MeetingController・cancel	キャンセルした人の相手方（受講生orコーチ）	受講中（InProgress）でないユーザー（退会済・修了済・招待中）																				
+	ChatMessageReceivedNotification.php	chat_message_received	チャットメッセージ受信時（Chat・StoreMessageAction）	チャット相手	受講中でない受講生（退会済・修了済・招待中）																				
+	QaReplyReceivedNotification.php	qa_reply_received	Q&Aへの回答投稿時（QaReply・StoreAction）	質問を投稿した受講生	受講中でない受講生（退会済・修了済・招待中）、回答者本人が質問投稿者である場合																				
+	MeetingReservedNotification.php	meeting_reserved	面談予約時（MeetingController・store）	当該面談の担当コーチ	担当コーチが通知対象外条件に該当する場合																				
+	MeetingCanceledNotification.php	meeting_canceled	面談キャンセル時（MeetingController・cancel）	キャンセルした人の相手方（受講生またはコーチ）	通知対象の受講生が受講中でない場合（退会済・修了済・招待中）																				
 																									
 	メッセージ内容																								
-	通知種別	アプリ内通知タイトル	アプリ内通知メッセージ	アプリ内通知本文	アプリ内通知遷移先	メール件名	メール本文																		
+	通知種別	アプリ内通知タイトル	アプリ内通知メッセージ	アプリ内通知本文	アプリ内通知およびメールボタンの遷移先	メール件名	メール本文																		
 	chat_message_received	新しいチャットメッセージがあります	新しいチャットメッセージを受信しました。	新しいチャットメッセージを受信しました。	対象のチャットルーム（chat.show）	【Certify LMS】チャット受信のお知らせ	"Certify LMS をご利用の皆様へ
 新しいチャットメッセージを受信しました。
-Certify LMS にログインして内容をご確認ください。
+「業務画面を開く」ボタン
 心当たりがない場合は、このメールを破棄してください。
 Certify LMS 運営チーム"																		
 	qa_reply_received	Q&Aに回答がありました	投稿したQ&Aに回答がありました。	投稿したQ&Aに回答がありました。	対象の質問詳細（qa-board.show）	【Certify LMS】Q&A返信のお知らせ	"Certify LMS をご利用の皆様へ
 投稿したQ&Aに回答がありました。
-Certify LMS にログインして回答内容をご確認ください。
+「業務画面を開く」ボタン
 心当たりがない場合は、このメールを破棄してください。
 Certify LMS 運営チーム"																		
 	meeting_reserved	面談が予約されました	面談が予約されました。	面談が予約されました。	面談一覧（coach.meetings.index）	【Certify LMS】面談予約のお知らせ	"Certify LMS をご利用の皆様へ
 面談が予約されました。
-Certify LMS にログインして面談の詳細をご確認ください。
+「業務画面を開く」ボタン
 心当たりがない場合は、このメールを破棄してください。
 Certify LMS 運営チーム"																		
-	meeting_canceled	面談がキャンセルされました	予定されていた面談がキャンセルされました。	予定されていた面談がキャンセルされました。	"面談一覧
-受講生：meetings.index
-コーチ：coach.meetings.index"	【Certify LMS】面談キャンセルのお知らせ	"Certify LMS をご利用の皆様へ
+	meeting_canceled	面談がキャンセルされました	予定されていた面談がキャンセルされました。	予定されていた面談がキャンセルされました。	面談一覧（受講生：meetings.index／コーチ：coach.meetings.index）	【Certify LMS】面談キャンセルのお知らせ	"Certify LMS をご利用の皆様へ
 予定されていた面談がキャンセルされました。
-Certify LMS にログインして詳細をご確認ください。
+「業務画面を開く」ボタン
 心当たりがない場合は、このメールを破棄してください。
 Certify LMS 運営チーム"																		
-																									
-	項目	仮設計	備考																						
-	通知対象	受講生・コーチ	通知種別ごとの詳細は通知種別一覧を参照																						
-	管理者への通知	対象外	MVP対象外																						
-	利用状態による通知対象外	未確定	利用状態・ロール等による具体的な条件はPM確認																						
-	メール通知	アプリ内通知と同時に送信	Notificationの配信チャネルとしてdatabase・mailを利用																						
-	メール文面	通知種別ごとに固定文面	件名・本文は通知種別一覧に記載																						
-	メール送信方式	同期送信	メール配信のキュー非同期化はスコープ外																						
 																									
 シーディング設計																									
 受講生用																									
-No.	通知種別	件数	既読	未読	確認内容																				
-1	chat_message_received	4	2	2	チャット通知の表示・チャットルームへの遷移																				
-2	qa_reply_received	9	4	5	Q&A回答通知の表示・質問詳細への遷移																				
-3	meeting_canceled	8	2	6	面談キャンセル通知の表示・面談一覧への遷移																				
-合計		21	8	13	既読・未読の混在、新着順の表示																				
+No.	通知種別	件数	確認内容																						
+1	chat_message_received	4	チャット通知の表示・チャットルームへの遷移																						
+2	qa_reply_received	9	Q&A回答通知の表示・質問詳細への遷移																						
+3	meeting_canceled	8	面談キャンセル通知の表示・面談一覧への遷移																						
+合計		21	既読8件・未読13件の混在、新着順の表示																						
 																									
 コーチ用																									
-No.	通知種別	件数	既読	未読	確認内容																				
-1	chat_message_received	2	1	1	チャット通知の表示・チャットルームへの遷移																				
-2	meeting_reserved	10	3	7	面談予約通知の表示・面談一覧への遷移																				
-3	meeting_canceled	9	4	5	面談キャンセル通知の表示・面談一覧への遷移																				
-合計		21	8	13	既読・未読の混在、新着順の表示																				
+No.	通知種別	件数	確認内容																						
+1	chat_message_received	2	チャット通知の表示・チャットルームへの遷移																						
+2	meeting_reserved	10	面談予約通知の表示・面談一覧への遷移																						
+3	meeting_canceled	9	面談キャンセル通知の表示・面談一覧への遷移																						
+合計		21	既読8件・未読13件の混在、新着順の表示																						
+																									
+	対象	処理	備考																						
+	アプリ内通知	業務イベント発生時に対象ユーザーへDatabase Notificationを作成する	通知種別ごとのNotificationクラスを利用する																						
+	メール通知	業務イベント発生時に対象ユーザーへメール通知する	Notificationクラスのmailチャネルを利用する。件名・本文は通知種別一覧を参照する																						
+	通知発行	業務イベントからSendNotificationActionを呼び出して通知を発行する	通知対象者の特定は各業務処理で行い、通知対象外条件を確認する																						
+	通知既読化	通知クリック時に既読化する	通知の所有者確認はPolicyで行う																						
+	通知遷移	通知を既読化した後、通知種別に応じた業務画面へ遷移する	具体的な遷移先は通知種別一覧を参照する。遷移先に必要な識別情報は通知データに保持する																						
+	メール遷移	メール本文に「業務画面を開く」ボタンを設ける	ボタンの遷移先は対応するアプリ内通知と同じ業務画面とする																						
+	一括既読	本人の未読通知をまとめて既読化する	認証ユーザー本人の未読通知のみを対象とする																						
+	通知対象	受講生・コーチ	管理者向け通知はMVP対象外																						
+	通知対象外条件	受講中でない受講生には通知を発行しない	退会済・修了済・招待中を対象外とする。状態の判定は既存Userモデル・Enumに合わせる																						
+	通知画面	既存resources/views/notifications/配下を利用する	本チケットでは画面変更なし																						
+	メール非同期化	メール配信のキュー非同期化は行わない	スコープ外。同期送信時のメール送信失敗時の扱いは既存実装を確認する																						
