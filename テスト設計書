@@ -1,27 +1,40 @@
-No	テストファイル（案）	テストケース名（案）	前提条件・入力	操作	期待結果																				
-1	tests/Feature/Http/Notification/IndexTest.php	test_authenticated_student_can_view_notification_index	認証済みの受講生に通知が登録されている	通知一覧画面にアクセスする	通知一覧画面が表示され、自分の通知が表示される																				
-2	tests/Feature/Http/Notification/IndexTest.php	test_authenticated_coach_can_view_notification_index	認証済みの講師に通知が登録されている	通知一覧画面にアクセスする	通知一覧画面が表示され、自分の通知が表示される																				
-3	tests/Feature/Http/Notification/IndexTest.php	test_notifications_are_ordered_by_latest	異なる作成日時の通知が複数登録されている	通知一覧画面にアクセスする	通知が作成日時の降順で表示される																				
-4	tests/Feature/Http/Notification/IndexTest.php	test_notification_index_paginates_twenty_items_per_page	認証ユーザーに21件以上の通知が登録されている	通知一覧画面にアクセスし、ページを切り替える	1ページ目に最大20件、次ページに残りの通知が表示される																				
-5	tests/Feature/Http/Notification/IndexTest.php	test_unread_tab_displays_only_unread_notifications	既読・未読の通知が登録されている	未読タブを選択する	未読の通知のみが表示される																				
-6	tests/Feature/Http/Notification/IndexTest.php	test_notification_index_does_not_display_other_users_notifications	認証ユーザーと他ユーザーの両方に通知が登録されている	通知一覧画面にアクセスする	認証ユーザー自身の通知のみが表示される																				
-7	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_updates_notification_read_at	認証ユーザー自身の未読通知が登録されている	通知の既読操作を行う	対象通知のread_atが設定される																				
-8	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_chat_room_for_chat_notification	未読通知のdataにroute「chat.show」と有効なroute_params（room）が設定されている	通知の既読操作を行う	通知が既読になり、該当するチャットルーム画面にリダイレクトされる																				
-9	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_qa_thread_for_qa_notification	未読通知のdataにroute「qa-board.show」と有効なroute_params（thread）が設定されている	通知の既読操作を行う	通知が既読になり、該当するQ&A詳細画面にリダイレクトされる																				
-10	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_meetings_index_for_reserved_notification	未読通知のdataにroute「meetings.index」と空のroute_paramsが設定されている	通知の既読操作を行う	通知が既読になり、面談一覧画面にリダイレクトされる																				
-11	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_meetings_index_for_canceled_notification	未読通知のdataにroute「meetings.index」と空のroute_paramsが設定されている	通知の既読操作を行う	通知が既読になり、面談一覧画面にリダイレクトされる																				
-12	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_falls_back_to_notification_index_for_invalid_route_data	未読通知のdataに遷移先routeの欠落・許可されていないroute・不正なroute_paramsのいずれかが設定されている	通知の既読操作を行う	例外が発生せず通知が既読になり、通知一覧画面にリダイレクトされる																				
-13	tests/Feature/Http/Notification/MarkAsReadTest.php	test_user_cannot_mark_another_users_notification_as_read	他ユーザーの通知が登録されている	認証ユーザーが他ユーザーの通知に対して既読操作を行う	認可エラーとなり、他ユーザーの通知は既読にならない																				
-14	tests/Feature/Http/Notification/MarkAllAsReadTest.php	test_mark_all_as_read_updates_only_authenticated_users_notifications	認証ユーザーと他ユーザーに未読通知が登録されている	すべて既読にする操作を行う	認証ユーザー自身の未読通知のみが既読になる																				
-15	tests/Feature/UseCases/Chat/StoreMessageActionTest.php	test_sending_chat_message_creates_notification_for_other_chat_members	チャットルームに複数のメンバーが参加している	メッセージを送信する	送信者以外の対象メンバーに通知が作成され、dataにroute「chat.show」と対象ルームのroute_params（room）が保存される																				
-16	tests/Feature/Http/QaBoard/CrudReplyTest.php	test_replying_to_own_question_does_not_create_notification	認証ユーザー自身が質問を投稿している	自分の質問に返信する	質問者向けの通知が作成されない																				
-17	tests/Feature/Http/QaBoard/CrudReplyTest.php	test_replying_to_another_users_question_creates_notification_for_questioner	他ユーザーが投稿した質問が存在する	質問に返信する	質問者に通知が作成され、dataにroute「qa-board.show」と対象質問のroute_params（thread）が保存される																				
-18	tests/Feature/Http/Meeting/MeetingControllerTest.php	test_meeting_reserved_notification_is_sent_to_assigned_coach_only	面談を予約する受講生と担当講師が存在する	面談を予約する	担当講師に通知が作成され、dataにroute「meetings.index」と空のroute_paramsが保存される。受講生には通知が作成されない																				
-19	tests/Feature/Http/Meeting/MeetingControllerTest.php	test_meeting_canceled_notification_is_sent_to_counterparty_only	面談の予約者と相手方が存在する	面談をキャンセルする	キャンセルしたユーザーの相手方に通知が作成され、dataにroute「meetings.index」と空のroute_paramsが保存される。キャンセルしたユーザーには通知が作成されない																				
-20	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_sent_to_in_progress_student	受講中の受講生が通知対象に含まれる	通知送信処理を実行する	受講中の受講生に通知が作成される																				
-21	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_sent_to_in_progress_coach	受講中の講師が通知対象に含まれる	通知送信処理を実行する	受講中の講師に通知が作成される																				
-22	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_not_sent_to_invited_user	招待中のユーザーが通知対象に含まれる	通知送信処理を実行する	招待中のユーザーに通知が作成されない																				
-23	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_not_sent_to_graduated_user	卒業済みのユーザーが通知対象に含まれる	通知送信処理を実行する	卒業済みのユーザーに通知が作成されない																				
-24	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_not_sent_to_withdrawn_user	退会済みのユーザーが通知対象に含まれる	通知送信処理を実行する	退会済みのユーザーに通知が作成されない																				
-25	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_not_sent_to_admin	管理者が通知対象に含まれる	通知送信処理を実行する	管理者に通知が作成されない																				
-26	tests/Feature/Unit/Notifications/NotificationMailTest.php	test_notification_mail_subjects_start_with_certify_lms_prefix	通知メールの件名を生成する	通知メールの件名を確認する	件名が「【Certify LMS】」で始まる																				
+No	テストファイル	テストメソッド名	テスト内容	期待結果																				
+1	tests/Feature/Http/Notification/IndexTest.php	test_authenticated_user_can_view_notification_index	認証済みユーザーが通知一覧を表示する	HTTP 200で通知一覧が表示される																				
+2	tests/Feature/Http/Notification/IndexTest.php	test_guest_cannot_view_notification_index	未認証ユーザーが通知一覧にアクセスする	認証ミドルウェアの既存仕様に従ってリダイレクトされる																				
+3	tests/Feature/Http/Notification/IndexTest.php	test_notifications_are_ordered_by_created_at_descending	通知一覧を表示する	作成日時の降順で表示される																				
+4	tests/Feature/Http/Notification/IndexTest.php	test_paginates_20_per_page	通知を21件以上登録して一覧を表示する	1ページ目に20件表示され、次ページに残りの通知が表示される																				
+5	tests/Feature/Http/Notification/IndexTest.php	test_unread_tab_displays_only_unread_notifications	未読タブを開く	未読通知のみ表示される																				
+6	tests/Feature/Http/Notification/IndexTest.php	test_notification_index_does_not_display_other_users_notifications	他ユーザーの通知も登録して一覧を表示する	認証ユーザー本人の通知のみ表示される																				
+7	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_updates_notification_read_at	本人の未読通知を既読にする	対象通知のread_atが設定される																				
+8	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_chat_room_for_chat_notification	チャット通知を既読にする	通知に設定されたroomパラメーターを使用してchat.showへ遷移する																				
+9	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_qa_thread_for_qa_notification	Q&A返信通知を既読にする	通知に設定されたthreadパラメーターを使用してqa-board.showへ遷移する																				
+10	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_coach_meetings_index_for_reserved_notification	面談予約通知を既読にする	coach.meetings.indexへ遷移する																				
+11	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_student_meetings_index_for_canceled_notification	受講生が面談キャンセル通知を既読にする	meetings.indexへ遷移する																				
+12	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_coach_meetings_index_for_canceled_notification	コーチが面談キャンセル通知を既読にする	coach.meetings.indexへ遷移する																				
+13	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_notification_index_for_unknown_notification_type	未対応の通知種別を既読にする	通知一覧へ遷移する																				
+14	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_notification_index_for_invalid_route_params	遷移に必要なパラメーターが欠落・不正な通知を既読にする	例外を発生させず通知一覧へ遷移する																				
+15	tests/Feature/Http/Notification/MarkAsReadTest.php	test_user_cannot_mark_another_users_notification_as_read	他ユーザーの通知を既読にしようとする	認可エラーとなり、他ユーザーの通知は更新されない																				
+16	tests/Feature/Http/Notification/MarkAsReadTest.php	test_guest_cannot_mark_notification_as_read	未認証ユーザーが通知を既読にしようとする	認証ミドルウェアの既存仕様に従い、通知は更新されない																				
+17	tests/Feature/Http/Notification/MarkAllAsReadTest.php	test_mark_all_as_read_updates_only_authenticated_users_notifications	本人の未読通知と他ユーザーの未読通知を登録して一括既読にする	本人の未読通知のみ既読になり、他ユーザーの通知は更新されない																				
+18	tests/Feature/Http/Notification/MarkAllAsReadTest.php	test_mark_all_as_read_does_not_change_already_read_notifications	本人の既読通知と未読通知を登録して一括既読にする	未読通知が既読になり、既読通知の状態は変わらない																				
+19	tests/Feature/Http/Notification/MarkAllAsReadTest.php	test_guest_cannot_mark_all_notifications_as_read	未認証ユーザーが一括既読にアクセスする	認証ミドルウェアの既存仕様に従い、通知は更新されない																				
+20	tests/Feature/UseCases/Chat/StoreMessageActionTest.php	test_sending_chat_message_creates_notification_for_other_chat_members	チャットメッセージを送信する	通知対象となる相手のチャットメンバーに通知が作成され、送信者には作成されない																				
+21	tests/Feature/UseCases/Chat/StoreMessageActionTest.php	test_sending_chat_message_sends_email_to_other_chat_members	通知対象者がいるチャットでメッセージを送信する	通知対象者にメール通知が送信される																				
+22	tests/Feature/Http/QaBoard/CrudReplyTest.php	test_replying_to_own_question_does_not_create_notification	質問者本人が自分の質問に回答する	質問者へのQ&A返信通知は作成されない																				
+23	tests/Feature/Http/QaBoard/CrudReplyTest.php	test_replying_to_another_users_question_creates_notification_for_questioner	他ユーザーの質問に回答する	質問者にQ&A返信通知が作成される																				
+24	tests/Feature/Http/QaBoard/CrudReplyTest.php	test_replying_to_another_users_question_sends_email_to_questioner	他ユーザーの質問に回答する	通知対象の質問者にメール通知が送信される																				
+25	tests/Feature/Http/QaBoard/CrudReplyTest.php	test_replying_to_question_of_inactive_student_does_not_create_notification	通知対象外の状態にある受講生の質問に回答する	受講生への通知が作成されない（対象外状態の条件は実装仕様に合わせる）																				
+26	tests/Feature/Http/Meeting/MeetingControllerTest.php	test_meeting_reserved_notification_is_sent_to_assigned_coach_only	受講生が面談を予約し、担当コーチ・受講生・無関係なコーチへのアプリ内通知を確認する	担当コーチにMeetingReservedNotificationの通知レコードが作成され、notification_typeがmeeting_reservedとなる。受講生と無関係なコーチには通知レコードが作成されない																				
+27	tests/Feature/Http/Meeting/MeetingControllerTest.php	test_meeting_reserved_email_is_sent_to_assigned_coach	受講生が面談を予約し、担当コーチへのメール通知を確認する	担当コーチにMeetingReservedNotificationが送信され、送信チャネルにmailが含まれる。受講生と無関係なコーチには送信されない																				
+28	tests/Feature/Http/Meeting/MeetingControllerTest.php	test_meeting_canceled_notification_is_sent_to_coach_when_student_cancels	受講生が面談をキャンセルし、コーチへのアプリ内通知を確認する	コーチにMeetingCanceledNotificationの通知レコードが作成され、notification_typeがmeeting_canceledとなる。キャンセルした受講生には通知レコードが作成されない																				
+29	tests/Feature/Http/Meeting/MeetingControllerTest.php	test_meeting_canceled_notification_is_sent_to_student_when_coach_cancels	コーチが面談をキャンセルし、受講生へのアプリ内通知を確認する	受講生にMeetingCanceledNotificationの通知レコードが作成され、notification_typeがmeeting_canceledとなる。キャンセルしたコーチには通知レコードが作成されない																				
+30	tests/Feature/Http/Meeting/MeetingControllerTest.php	test_meeting_canceled_email_is_sent_to_coach_when_student_cancels	受講生が面談をキャンセルし、相手方であるコーチへのメール通知を確認する	コーチにMeetingCanceledNotificationが送信され、送信チャネルにmailが含まれる。キャンセルした受講生には送信されない																				
+31	tests/Feature/Http/Meeting/MeetingControllerTest.php	test_meeting_canceled_email_is_sent_to_student_when_coach_cancels	コーチが面談をキャンセルし、相手方である受講生へのメール通知を確認する	受講生にMeetingCanceledNotificationが送信され、送信チャネルにmailが含まれる。キャンセルしたコーチには送信されない																				
+32	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_sent_to_in_progress_student	通知対象条件を満たす受講中の受講生に通知を送信する	データベース通知が作成される																				
+33	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_not_sent_to_invited_user	招待中のユーザーを通知対象に指定する	通知が作成されない																				
+34	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_not_sent_to_graduated_user	通知対象外となる修了済み受講生を指定する	通知が作成されない																				
+35	tests/Feature/UseCases/Notification/SendNotificationActionTest.php	test_notification_is_not_sent_to_withdrawn_user	退会済み受講生を通知対象に指定する	通知が作成されない																				
+36	tests/Unit/Notifications/NotificationMailTest.php	test_chat_notification_email_uses_expected_subject_and_url	チャット通知メールを生成する	件名が所定のCertify LMSプレフィックスで始まり、メール内URLがアプリ内通知の遷移先と一致する																				
+37	tests/Unit/Notifications/NotificationMailTest.php	test_qa_reply_notification_email_uses_expected_subject_and_url	Q&A返信通知メールを生成する	件名が所定のCertify LMSプレフィックスで始まり、メール内URLが該当Q&Aスレッドの遷移先と一致する																				
+38	tests/Unit/Notifications/NotificationMailTest.php	test_meeting_reserved_notification_email_uses_expected_subject_and_url	面談予約通知メールを生成する	件名が所定のCertify LMSプレフィックスで始まり、メール内URLがcoach.meetings.indexの遷移先と一致する																				
+39	tests/Unit/Notifications/NotificationMailTest.php	test_meeting_canceled_notification_email_uses_expected_student_or_coach_url	面談キャンセル通知メールを生成する	受講生宛てはmeetings.index、コーチ宛てはcoach.meetings.indexに対応したURLになる																				
