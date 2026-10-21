@@ -1,104 +1,69 @@
-	S-B-04 通知基盤（アプリ内＋メール）			 																					
+	S-B-05 個人学習目標の管理																								
 	1. 基本設計書																								
 	Route,Controller																								
-	画面名称・動作	HTTPメソッド	パス	ルート先コントローラー	アクション	認証必須																			
-	通知一覧	GET	/notifications	NotificationController	index	〇																			
-	通知既読化	POST	/notifications/{notification}/read	NotificationController	markAsRead	〇																			
-	全件既読	POST	/notifications/read-all	NotificationController	markAllAsRead	〇																			
+	画面名称・動作	HTTPメソッド	パス	ルート先コントローラー	アクション	認証必須	認可																		
+	目標登録	POST	/enrollments/{enrollment}/goals	EnrollmentGoalController	store	〇	受講生本人																		
+	目標編集画面	GET	/enrollment-goals/{goal}/edit	EnrollmentGoalController	edit	〇	受講生本人																		
+	目標更新	PATCH	/enrollment-goals/{goal}	EnrollmentGoalController	update	〇	受講生本人																		
+	目標削除	DELETE	/enrollment-goals/{goal}	EnrollmentGoalController	destroy	〇	受講生本人																		
+	目標達成	POST	/enrollment-goals/{goal}/achieve	EnrollmentGoalController	markAchieved	〇	受講生本人																		
+	目標達成解除	DELETE	/enrollment-goals/{goal}/achieve	EnrollmentGoalController	unmarkAchieved	〇	受講生本人																		
 																									
-	2. テーブル仕様書	未作成																							
+	2. テーブル仕様書																								
 	テーブル名	カラム名	型	PRIMARY KEY	NOT NULL	FOREIGN KEY	備考																		
-	notifications	id	char(36)	〇	〇		ULID, 既存のDatabase Notificationを利用予定																		
-	notifications	type	varchar(255)				通知種別																		
-	notifications	notifiable_type	varchar(255)				通知対象モデル																		
-	notifications	notifiable_id	varchar(255)				通知対象ユーザー																		
-	notifications	data	text				通知データ																		
-	notifications	read_at	timestamp				既読日時。NULLの場合は未読																		
-	notifications	created_at	timestamp				通知作成日時																		
-	notifications	updated_at	timestamp				更新日時																		
+	enrollment_goals	id	char(26)	〇	〇		ULID																		
+	enrollment_goals	enrollment_id	char(26)		〇	enrollments.id	親の受講登録。親削除時は ON DELETE CASCADE で連動削除																		
+	enrollment_goals	title	varchar(100)		〇		目標タイトル。																		
+	enrollment_goals	description	text																						
+	enrollment_goals	target_date	date				目標期日。																		
+	enrollment_goals	achieved_at	timestamp				達成日時。NULLは未達成																		
+	enrollment_goals	created_at	timestamp																						
+	enrollment_goals	updated_at	timestamp																						
 																									
-	バリデーション設計書	なし																							
+	3. バリデーション設計書																								
+	ファイル名	フォーム	ルール	rules	attributes																				
+	EnrollmentGoal/StoreRequest	title	必須、文字列、最大100文字	required, string, max:100	目標																				
+	EnrollmentGoal/StoreRequest	description	任意、文字列、最大1000文字	nullable, string, max:1000	詳細																				
+	EnrollmentGoal/StoreRequest	target_date	任意、日付	nullable, date	目標期日																				
+	EnrollmentGoal/UpdateRequest	title	必須、文字列、最大100文字	required, string, max:100	目標																				
+	EnrollmentGoal/UpdateRequest	description	任意、文字列、最大1000文字	nullable, string, max:1000	詳細																				
+	EnrollmentGoal/UpdateRequest	target_date	任意、日付	nullable, date	目標期日																				
 																									
-	Policy																								
+	4. Policy																								
 	Policy	判定内容																							
-	NotificationPolicy	viewAny：認証ユーザーに通知一覧の閲覧を許可する																							
-	NotificationPolicy	markAsRead：対象通知が認証ユーザー本人宛てであることを確認する																							
-	NotificationPolicy	markAllAsRead：認証ユーザー自身の未読通知の一括既読化を許可する																							
+	EnrollmentGoalPolicy	view：EnrollmentPolicy::viewに委譲し、本人・担当コーチ・管理者の閲覧を許可する案																							
+	EnrollmentGoalPolicy	create：studentかつ親Enrollmentの本人のみ許可																							
+	EnrollmentGoalPolicy	update：studentかつ親Enrollmentの本人のみ許可																							
+	EnrollmentGoalPolicy	delete：studentかつ親Enrollmentの本人のみ許可																							
+	EnrollmentGoalPolicy	markAchieved / unmarkAchieved：studentかつ親Enrollmentの本人のみ許可																							
 																									
-	Action																								
-	対象	Action	処理																						
-	Notification	IndexAction	認証ユーザー自身の通知一覧を取得する。tabがunreadの場合は未読通知のみ取得し、新しい順に並べてページネーションを行う（1ページ20件）																						
-	Notification	MarkAsReadAction	指定された通知を既読化する。通知の所有者であることをPolicyで確認し、認証ユーザー本人の通知のみを操作する																						
-	Notification	MarkAllAsReadAction	認証ユーザー自身の未読通知をまとめて既読化する																						
-	Notification	SendNotificationAction	通知対象ユーザーとNotificationインスタンスを受け取り、通知対象ユーザーが受講中の受講生またはコーチであることを確認したうえでnotify()を呼び出す。アプリ内通知とメール通知の配信はNotificationクラスに委譲する																						
+	5. Action																								
+	対象	Action	処理	エラー																					
+	Enrollment	ShowAction	Enrollmentに紐づく目標一覧を取得し、未達成の目標を達成済みの目標より先に表示する。目標期日の昇順（期日が近い順）で表示し、目標期日が同じ場合は作成日時の降順（新しい順）で表示する。目標期日が未設定の目標は、期日が設定されている目標より後ろに表示する。	—																					
+	EnrollmentGoal	StoreAction	親Enrollmentに紐づく目標を登録する。入力値を保存する	バリデーションエラー：422																					
+	EnrollmentGoal	UpdateAction	タイトル・詳細・目標期日を更新する	バリデーションエラー：422																					
+	EnrollmentGoal	DestroyAction	対象目標を物理削除する	対象なし：404																					
+	EnrollmentGoal	MarkAchievedAction	対象目標の達成日時を設定する	対象なし：404																					
+	EnrollmentGoal	UnarkAchievedAction	対象目標の達成日時をNULLに戻す	対象なし：404																					
 																									
-	通知処理設計書																								
-	対象	処理	備考																						
-	アプリ内通知	業務イベント発生時に対象ユーザーへDatabase Notificationを作成する	通知種別ごとのNotificationクラスを利用する																						
-	メール通知	業務イベント発生時に対象ユーザーへメール通知する	Notificationクラスのmailチャネルを利用する。メール件名・本文は通知種別一覧を参照																						
-	通知発行	業務イベントからSendNotificationAction（追加案）を呼び出して通知を発行する	対象ユーザーの特定は各業務処理で行う。共通Actionで通知対象外条件を確認する		　																				
-	通知既読化	通知クリック時に既読化する	要件書に記載。所有者確認はPolicyで行う																						
-	通知遷移	通知クリック時に関連する業務画面へ遷移する	具体的な遷移先・決定方式は未確定																						
-	一括既読	本人の未読通知をまとめて既読化する	要件書に記載																						
-	通知対象	受講生・コーチ	管理者向け通知はMVP対象外																						
-	通知対象外条件	退会済み（withdrawn）のユーザーには通知を発行しない	退会状態の判定方法を既存Userモデル・Enumで確認して実装する																						
-	通知画面	既存resources/views/notifications/配下を利用する	本チケットでは画面変更なし																						
-	メール非同期化	メール配信のキュー非同期化は行わない	スコープ外。同期送信時のメール送信失敗時の扱いは確認する																						
+	シーディング設計書																								
+	項目	設計方針	備考																						
+	画面確認用データ	固定受講生に5件	画面表示・達成状態・並び順・各操作を確認																						
+	閲覧権限確認用データ	既存のデモ受講生を利用	コーチ・ほかの受講生からの閲覧可否を確認																						
+	管理者の閲覧確認	既存の受講登録データを利用	管理者用の目標データは追加しない																						
+	目標日時	Carbon::today()->addDays(N)	実行日を基準にした日付																						
+	作成日時	now()->subDays(N)	実行日時を基準にした作成日時																						
+	達成日時	達成済みは now()->subDays(2)、未達成は NULL	実行日時を基準に設定																						
 																									
-	Notification																								
-	ファイル名	通知種別	発火イベント	通知対象	通知対象外条件																				
-	ChatMessageReceivedNotification.php	chat_message_received	チャットメッセージ受信時（Chat・StoreMessageAction）	チャット相手	受講中でない受講生（退会済・修了済・招待中）																				
-	QaReplyReceivedNotification.php	qa_reply_received	Q&Aへの回答投稿時（QaReply・StoreAction）	質問を投稿した受講生	受講中でない受講生（退会済・修了済・招待中）、回答者本人が質問投稿者である場合																				
-	MeetingReservedNotification.php	meeting_reserved	面談予約時（MeetingController・store）	当該面談の担当コーチ	担当コーチが通知対象外条件に該当する場合																				
-	MeetingCanceledNotification.php	meeting_canceled	面談キャンセル時（MeetingController・cancel）	キャンセルした人の相手方（受講生またはコーチ）	通知対象の受講生が受講中でない場合（退会済・修了済・招待中）																				
+	固定受講生																								
+No	達成状態	目標期日の設定	作成日時の設定	達成日時の設定	確認内容																				
+1	未達成	Carbon::today()->addDays(7)	now()->subMinutes(40)	NULL	期日が近い未達成目標が先に表示されること																				
+2	未達成	Carbon::today()->addDays(14)	now()->subMinutes(30)	NULL	同一期日の目標のうち、作成日時が古い方																				
+3	未達成	Carbon::today()->addDays(14)	now()->subMinutes(20)	NULL	No.2より先に表示され、作成日時降順になること																				
+4	未達成	NULL	now()->subMinutes(10)	NULL	期日未設定の未達成目標が、期日設定済みの未達成目標より後ろに表示されること																				
+5	達成済み	Carbon::today()->addDays(7)	now()->subMinutes(5)	now()->subDays(2)	達成済みの目標が未達成の目標より後ろに表示されること																				
 																									
-	メッセージ内容																								
-	通知種別	アプリ内通知タイトル	アプリ内通知メッセージ	アプリ内通知本文	アプリ内通知およびメールボタンの遷移先	メール件名	メール本文																		
-	chat_message_received	新しいチャットメッセージがあります	新しいチャットメッセージを受信しました。	新しいチャットメッセージを受信しました。	対象のチャットルーム（chat.show）	【Certify LMS】チャット受信のお知らせ	"Certify LMS をご利用の皆様へ
-新しいチャットメッセージを受信しました。
-「業務画面を開く」ボタン
-心当たりがない場合は、このメールを破棄してください。
-Certify LMS 運営チーム"																		
-	qa_reply_received	Q&Aに回答がありました	投稿したQ&Aに回答がありました。	投稿したQ&Aに回答がありました。	対象の質問詳細（qa-board.show）	【Certify LMS】Q&A返信のお知らせ	"Certify LMS をご利用の皆様へ
-投稿したQ&Aに回答がありました。
-「業務画面を開く」ボタン
-心当たりがない場合は、このメールを破棄してください。
-Certify LMS 運営チーム"																		
-	meeting_reserved	面談が予約されました	面談が予約されました。	面談が予約されました。	面談一覧（coach.meetings.index）	【Certify LMS】面談予約のお知らせ	"Certify LMS をご利用の皆様へ
-面談が予約されました。
-「業務画面を開く」ボタン
-心当たりがない場合は、このメールを破棄してください。
-Certify LMS 運営チーム"																		
-	meeting_canceled	面談がキャンセルされました	予定されていた面談がキャンセルされました。	予定されていた面談がキャンセルされました。	面談一覧（受講生：meetings.index／コーチ：coach.meetings.index）	【Certify LMS】面談キャンセルのお知らせ	"Certify LMS をご利用の皆様へ
-予定されていた面談がキャンセルされました。
-「業務画面を開く」ボタン
-心当たりがない場合は、このメールを破棄してください。
-Certify LMS 運営チーム"																		
-																									
-シーディング設計																									
-受講生用																									
-No.	通知種別	件数	確認内容																						
-1	chat_message_received	4	チャット通知の表示・チャットルームへの遷移																						
-2	qa_reply_received	9	Q&A回答通知の表示・質問詳細への遷移																						
-3	meeting_canceled	8	面談キャンセル通知の表示・面談一覧への遷移																						
-合計		21	既読8件・未読13件の混在、新着順の表示																						
-																									
-コーチ用																									
-No.	通知種別	件数	確認内容																						
-1	chat_message_received	2	チャット通知の表示・チャットルームへの遷移																						
-2	meeting_reserved	10	面談予約通知の表示・面談一覧への遷移																						
-3	meeting_canceled	9	面談キャンセル通知の表示・面談一覧への遷移																						
-合計		21	既読8件・未読13件の混在、新着順の表示																						
-																									
-	対象	処理	備考																						
-	アプリ内通知	業務イベント発生時に対象ユーザーへDatabase Notificationを作成する	通知種別ごとのNotificationクラスを利用する																						
-	メール通知	業務イベント発生時に対象ユーザーへメール通知する	Notificationクラスのmailチャネルを利用する。件名・本文は通知種別一覧を参照する																						
-	通知発行	業務イベントからSendNotificationActionを呼び出して通知を発行する	通知対象者の特定は各業務処理で行い、通知対象外条件を確認する																						
-	通知既読化	通知クリック時に既読化する	通知の所有者確認はPolicyで行う																						
-	通知遷移	通知を既読化した後、通知種別に応じた業務画面へ遷移する	具体的な遷移先は通知種別一覧を参照する。遷移先に必要な識別情報は通知データに保持する																						
-	メール遷移	メール本文に「業務画面を開く」ボタンを設ける	ボタンの遷移先は対応するアプリ内通知と同じ業務画面とする																						
-	一括既読	本人の未読通知をまとめて既読化する	認証ユーザー本人の未読通知のみを対象とする																						
-	通知対象	受講生・コーチ	管理者向け通知はMVP対象外																						
-	通知対象外条件	受講中でない受講生には通知を発行しない	退会済・修了済・招待中を対象外とする。状態の判定は既存Userモデル・Enumに合わせる																						
-	通知画面	既存resources/views/notifications/配下を利用する	本チケットでは画面変更なし																						
-	メール非同期化	メール配信のキュー非同期化は行わない	スコープ外。同期送信時のメール送信失敗時の扱いは既存実装を確認する																						
+	デモ受講生																								
+	対象受講生	目標件数	確認する利用者	確認内容																					
+1	既存のデモ受講生1	必要な場合のみ1件	担当コーチ	担当する受講生の目標を閲覧できること																					
+2	既存のデモ受講生2	必要な場合のみ1件	別の受講生	他人の目標を閲覧できないこと																					
