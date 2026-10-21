@@ -1,126 +1,111 @@
-	S-B-04 通知基盤（アプリ内＋メール）																								
-	1. 要件																								
-	区分	要件																							
-	通知一覧	受講生・コーチがサイドバーの「通知」から自分宛の通知一覧を確認できる																							
-	通知発火	業務イベント発生時に対象ユーザーへアプリ内通知とメールで知らせる																							
-	既読化	通知をクリックすると既読化し、関連する業務画面へ遷移する																							
-	一括既読	未読通知をまとめて既読化できる																							
-	認可	他人宛の通知は閲覧・既読化できない																							
-	配信対象	利用状態やロールに応じて通知の受信対象を制御する																							
-	対象ロール	受講生・コーチを通知対象とし、管理者向け通知は本MVPでは扱わない																							
-	ページネーション	通知一覧をページ分割して表示できる																							
-	通知種別	種別の異なる通知を一覧に表示し、通知クリック時は種別に応じた関連画面へ遷移する																							
-	画面	既存resources/views/notifications/配下の画面を使用し、本チケットでは画面変更を行わない																							
-	ルーティング	GET /notifications、POST /notifications/{notification}/read、POST /notifications/read-allを提供する																							
-	メール	対象ユーザーへ業務イベントに応じたメールを送信する																							
+S-B-05 個人学習目標の管理																									
+【要件】																									
+No	要件																								
+1	受講生は受講登録詳細画面から個人目標を新規登録できる																								
+2	個人目標の登録時にタイトル・詳細・目標期日を入力できる																								
+3	受講生は登録済みの個人目標を編集できる																								
+4	個人目標の編集ではタイトル・詳細・目標期日を更新できる																								
+5	受講生は登録済みの個人目標を物理削除できる																								
+6	受講生は個人目標を達成済みに変更できる																								
+7	受講生は達成済みの個人目標を未達成に戻せる																								
+8	受講生本人は受講登録詳細画面で個人目標一覧を確認できる																								
+9	個人目標一覧では達成済みと未達成を視覚的に区別できる																								
+10	コーチは担当資格に登録された受講生の個人目標を閲覧できる																								
+11	管理者は任意の受講生の個人目標を閲覧できる																								
+12	コーチ・管理者は個人目標を変更できない																								
+13	他の受講生は他人の個人目標を閲覧・操作できない																								
+14	個人目標の追加・編集・削除・達成・達成解除は受講生本人のみ実行できる																								
+15	個人目標一覧は達成状況が分かりやすい順序で表示する																								
+16	親の受講登録が削除された場合、配下の個人目標も連動して削除する																								
+17	受講停止状態の受講生は、受講登録へのアクセス制限により個人目標の操作にも到達できない																								
+18	個人目標一覧と追加フォームは受講登録詳細画面内に表示する																								
+19	個人目標の編集画面は専用ページとする																								
+20	個人目標の削除は物理削除とし、履歴を保持しない																								
+21	受講登録の初期データ生成時に個人目標の初期データを投入する																								
+22	初期データには達成済み・未達成の目標を混在させる																								
+23	固定受講生およびデモ受講生の目標データを用意し、各ロールの閲覧認可を確認できるようにする																								
+24	目標テンプレート・総合目標・通知・リマインダー・達成統計・コメント・優先度・サブタスクは本チケットの対象外とする																								
 																									
-	2. 仕様仮説																								
-	項目	現時点の仕様仮説	根拠・確認状況																						
-	通知一覧	認証ユーザー自身の通知のみ一覧表示する	チケット記載・既存通知画面																						
-	通知データ	Laravel標準のDatabase Notificationを利用する	notification-row.blade.phpでDatabaseNotificationを型指定																						
-	通知保存先	notificationsテーブルを使用する	既存画面がDatabase Notificationを参照																						
-	通知順	通知日時の降順で新しい通知から表示する	通知一覧としての想定・既存画面																						
-	既読状態	read_atがNULLの場合を未読、値ありの場合を既読とする	notification-row.blade.phpでread_at === nullを判定																						
-	既読通知	既読済み通知も一覧に表示する	既読・未読の表示切替あり・通知削除はスコープ外																						
-	未読タブ	全件と未読のみを切り替えて表示する	既存index.blade.phpに全件・未読のみのタブUIあり																						
-	個別既読	本人の通知のみ既読化し、既読化後に関連画面へ遷移する	チケット記載・既存notification-row.blade.php																						
-	一括既読	本人の未読通知をまとめて既読化する	チケット記載・既存index.blade.php																						
-	他人の通知	他人の通知は一覧表示・既読化ともに不可とする	チケット記載																						
-	通知クリック	既存notification-row.blade.phpではPOSTフォームで既読化する構成	既存BladeにmarkAsReadへのPOSTフォームあり																						
-	通知詳細	通知詳細画面で通知本文を表示する	既存show.blade.php																						
-	遷移先	通知データの種別等に応じて関連業務画面へ遷移する	既存Bladeにnotification_typeの判定あり																						
-	通知種別	複数の通知種別を扱う	既存Bladeに複数のnotification_typeが定義されている																						
-	通知発火	業務イベント発生時にLaravel Notificationを利用してDatabase＋Mailへ通知する	Laravel Notification基盤・User::Notifiableは既存																						
-	メール	業務通知NotificationのtoMail()でメールを送信する	既存ResetPasswordNotificationでMailMessageを利用																						
-	メール送信	同期処理でメールを送信する	スコープ外に「メール配信のキュー非同期化」と記載																						
-	通知対象	受講生・コーチを対象とし、管理者はMVP対象外とする	チケット記載																						
-	利用状態	利用状態に応じて通知対象から除外する	チケット記載・具体的条件は要確認																						
-	通知削除	通知削除機能は提供せず、既読化のみとする	スコープ外																						
-	通知設定	通知種別ごとのON/OFF設定は提供しない	スコープ外																						
-	リアルタイム通知	リアルタイムpush・通知ポップオーバーによる通知配信は本チケットでは実装しない	スコープ外																						
-	管理者通知	管理者向け通知はMVPでは提供しない	スコープ外																						
-	面談リマインダー	面談リマインダー通知は対象外とする	スコープ外																						
-	初期データ	固定の受講生・コーチに既読・未読、複数種別の通知を投入する	チケット記載																						
+【仮説仕様】																									
+No	項目	仕様仮説	情報元																						
+1	目標の管理単位	Enrollment単位で管理し、資格ごとに目標を分ける	S-B-05要件：受講登録配下に個人目標を作成																						
+2	目標一覧の表示場所	受講登録詳細画面内に表示し、独立した一覧画面は設けない	S-B-05インターフェース																						
+3	目標追加	受講登録詳細画面内のフォームから登録する	S-B-05要件																						
+4	目標編集	専用の編集画面でタイトル・詳細・目標期日を更新する	S-B-05インターフェース																						
+5	目標削除	物理削除とし、削除履歴は保持しない	S-B-05要件・スコープ外																						
+6	達成状態	達成日時の有無で未達成・達成済みを表現する想定	S-B-05スコープ外：達成日時1つでの状態管理																						
+7	達成操作	達成時に達成日時を設定し、達成解除時にNULLへ戻す想定	S-B-05要件・スコープ外																						
+8	達成状態の保存	専用の達成状態カラムではなく、achieved_at等の日時カラムで表現する想定	S-B-05スコープ外：達成日時1つでの状態管理																						
+9	一覧順序	未達成を先に表示し、目標期日昇順、同値の場合は作成日時昇順とする案	要件「達成状況が分かりやすい順序」からの仮説																						
+10	タイトル	必須、文字列、最大100文字とする案	入力制約は未指定。既存画面・類似機能との照合が必要																						
+11	詳細	任意、文字列、最大2000文字とする案	入力制約は未指定。既存画面・類似機能との照合が必要																						
+12	目標期日	必須の日付とする案	入力制約は未指定。PM確認が必要																						
+13	目標期日の過去日	過去日も登録可能とする案	過去の目標の記録を想定した仮説																						
+14	一覧取得	Enrollmentに紐づく目標のみを取得する	受講登録配下の個人目標という要件																						
+15	閲覧認可	EnrollmentPolicy::viewを利用し、本人・担当コーチ・管理者の閲覧を許可する案	既存EnrollmentPolicy																						
+16	変更認可	studentかつ対象Enrollmentの本人であることをPolicyで判定する案	既存LearningHourTargetPolicy																						
+17	受講停止状態	既存の受講登録アクセス制限・active-learningの仕様を確認し、整合する制御とする	S-B-05要件・既存routes/web.php																						
+18	不正な目標ID	存在しない目標IDは404とする想定	Route Model Bindingの既存パターンとの照合が必要																						
+19	権限不足	認可に失敗した場合は403とする想定	既存Policyの認可方式																						
+20	入力エラー	FormRequestのバリデーションエラーとして扱う	既存FormRequestパターン																						
+21	登録・更新後	受講登録詳細画面へリダイレクトし、成功メッセージを表示する案	既存EnrollmentControllerの処理パターン																						
+22	削除後	受講登録詳細画面へリダイレクトし、成功メッセージを表示する案	画面構成・既存Controllerの処理パターン																						
+23	達成・達成解除後	受講登録詳細画面へリダイレクトし、達成状態を更新する案	画面構成・既存Controllerの処理パターン																						
+24	親削除時の連動削除	Enrollmentの削除方式を調査したうえで、配下目標の物理削除を実現する	既存EnrollmentはSoftDeletesを使用																						
+25	一覧件数	個人目標の一覧ページネーションは設けず、全件表示とする	独立した一覧画面を持たない要件																						
+26	目標ID	既存のモデル・マイグレーション規約に合わせ、ULIDを使用する案	既存Enrollmentの主キーがULID																						
+27	初期データ	固定受講生とデモ受講生のEnrollmentに複数の目標を紐づける	S-B-05初期データ要件																						
+28	テスト	Featureテストを中心に、CRUD・状態変更・認可・入力制約を確認する	既存機能のテスト構成との照合が必要																						
 																									
-	3. 要確認事項																								
-	No.	確認事項	PM回答																						
-	1	通知一覧は通知日時の降順（新しい通知から）で表示し、1ページあたりの表示件数は他一覧と同じ20件/ページとしてよいか。	OK																						
-	2	通知種別ごとの発火イベント・通知対象・メール件名・本文について、別表の仮設計の内容で問題ないか。	"終了承認時の通知は実装不要です。チャットメッセージ受信時は特に問題ないです。
-Q&A への回答投稿時について、質問を投稿した受講生自身がメッセージ送信時は通知しないようにしてください。
-面談予約時は担当コーチへのみ通知するようにしてください。
-面談キャンセル時はキャンセルした人の相手方へのみ通知するようにしてください。
-メール件名は「【Certify LMS】」で始まる形にしてもらえればと思います。"																						
-	3	通知対象外は、退会済（withdrawn）のユーザーでよいか	「受講中」でないユーザー（退会済・修了済・招待中）も対象外																						
-	4	通知機能の実装方法	"通知データについては遷移先のルート名とパラメータを保存して利用する形をおすすめします。
-遷移先が存在しない場合は、通知一覧へフォールバックする方針は特に問題ないです。"																						
-	5	メール送信に失敗した場合、アプリ内通知の登録は成功扱いとするか、それともメール失敗時にアプリ内通知の登録も取り消すか。	メール送信失敗時の挙動についてですが、今回のチケットでは特に対応する必要はなく、通知チャネルの順番を database を mail より先に指定しておく、通知の送信は業務処理のトランザクションが完了した後に送る、というようにしておいてもらえれば大丈夫です。																						
-	7	管理者の通知機能は本チケットの対象外なので、403が返ることは問題ないか	 403 エラーが変えるのではなく、空（通知はありません）になるようにして貰えればと思います。																						
+【PM確認事項】																									
+No	確認事項	提案・確認したい内容																							
+1	バリデーションルール	タイトルは必須・最大100文字、詳細は任意・最大1000文字、目標期日は任意、未来の日付とするか	"タイトル、詳細はOK
+目標期日は任意、過去の日付も許容する"																						
+2	目標一覧の並び順	"要件「達成状況が分かりやすい順序」
+未達成を先に表示し、目標期日昇順、同値の場合は作成日時昇順としてよいか"	並び順については未達成を先に表示するようにしてもらえればと思います。その中で目標期日が近い順、期日が同じ場合は作成日の新しい順でお願いします。期日が未設定の目標は期日がある目標より後ろに表示するようにしてください。																						
+3	親の受講削除時	ON DELETE CASCADEで目標も削除される設計でよいか	OK　「親の受講登録が削除された場合」というのは物理削除された場合という認識で大丈夫です。そのため、親の論理削除とあわせて配下の目標を物理削除する実装に変更する必要はないです。																						
+4	達成日時の扱い	達成時にachieved_at日時を設定し、達成解除時にNULLへ戻す方式でよいか	OK																						
+5	削除不可・状態変更不可時の扱い	通常の認可エラー403とするか、業務上の状態エラーを別途設ける必要があるか	削除や状態遷移の本人性以外のルールはなく、すべて403か404のエラーが返る想定（409/Exceptionの実装はない）																						
+6	タイトルと詳細の空白許可	全角空白・半角空白のみの入力は不可？	不可とせずに問題ない。																						
+7	成功時の画面遷移	登録・更新・削除・達成状態変更後は受講登録詳細画面に戻す方針でよいか	OK																						
+8	シーディング設計		OK																						
 																									
-	4. 既存コード調査で確認																								
-No.	調査事項	確認内容	確認結果																						
-1	Userモデル	通知機能に必要なNotifiableトレイトの有無	UserモデルでIlluminate\Notifications\Notifiableをuseしている。Laravel標準のnotifications()/unreadNotifications()等を利用できる状態																						
-2	Userモデル	通知のBroadcastチャンネル定義	receivesBroadcastNotificationsOn()が実装され、notifications.{userId}を返す。ただしリアルタイムpushはS-B-04スコープ外																						
-3	通知モデル	Laravel DatabaseNotificationの利用状況	notification-row.blade.phpでIlluminate\Notifications\DatabaseNotificationを型指定しており、Database Notificationを前提とした画面が存在																						
-4	通知テーブル	notificationsテーブルのmigration	通知用migrationは既存実装に存在せず、S-B-04で新規作成が必要																						
-5	通知Controller	通知一覧・既読化・一括既読Controller	NotificationControllerは既存せず、S-B-04で新規作成が必要																						
-6	通知ルート	GET /notifications	既存routes/web.phpにnotifications.indexのルートは存在せず、S-B-04で追加が必要																						
-7	個別既読ルート	POST /notifications/{notification}/read	既存ルートは存在せず、既存notification-row.blade.phpからnotifications.markAsReadを参照している状態																						
-8	一括既読ルート	POST /notifications/read-all	既存ルートは存在せず、既存index.blade.phpからnotifications.markAllAsReadを参照している状態																						
-9	通知Policy	本人の通知のみ閲覧・既読化するPolicy	NotificationPolicyは既存せず、認可処理の新規実装が必要																						
-10	通知一覧画面	index.blade.php	既存resources/views/notifications/index.blade.phpに存在。未読件数、全件既読、全件/未読タブ、一覧、ページネーション表示を想定した画面構成																						
-11	通知詳細画面	show.blade.php	既存resources/views/notifications/show.blade.phpに存在。通知種別・タイトル・本文・受信日時を表示																						
-12	通知行	notification-row.blade.php	既存。未読/既読の表示切替、通知種別アイコン、タイトル、メッセージ、相対日時、markAsRead POSTフォームを実装																						
-13	通知ポップオーバー	notification-popover.blade.php	既存。全件/未読タブ、全件既読、通知一覧、すべての通知を見る導線のUI骨組みが存在																						
-14	TopBar	通知ベルと未読バッジ	既存topbar.blade.phpに通知ベルとnotification-popoverのincludeあり。ただしnotifications.indexルートが存在するときだけ表示する実装																						
-15	未読バッジ	NotificationBadgeComposer	既存app/View/Composers/NotificationBadgeComposer.phpでunreadNotifications()->count()を取得。notifications.indexルート未登録時はDBを参照せず0を返す																						
-16	View Composer登録	AppServiceProvider	既存AppServiceProviderでNotificationBadgeComposerをtopbarに登録済み																						
-17	受講生サイドバー	通知導線	既存sidebar-student.blade.phpにnotifications.indexへの「通知」項目が存在																						
-18	コーチサイドバー	通知導線	既存sidebar-coach.blade.phpにnotifications.indexへの「通知」項目が存在																						
-19	管理者サイドバー	通知導線	既存sidebar-admin.blade.phpにもnotifications.indexへの「通知」項目が存在。チケットでは管理者通知はMVP対象外のため対応要確認																						
-20	通知種別	既存画面で定義されている種別	chat_message_received、qa_reply_received、completion_approved、meeting_reserved、meeting_canceled、meeting_reminder、admin_announcement等が既存Bladeのicon判定に定義されている																						
-21	通知メール	既存Notification実装	ResetPasswordNotificationがapp/Notifications/Auth/に存在し、MailMessageを利用したメール通知の実装例として利用可能																						
-22	メール通知テスト	既存テスト	ResetPasswordNotificationTestでtoMail()のMailMessage生成をテストしている。業務通知のメールテストを追加する際の既存パターンとして利用可能																						
-23	Notification Facade	既存テストでの利用	PasswordResetTestでNotification::fake()を利用しており、通知発火テストの既存パターンがある																						
-24	EventServiceProvider	既存イベント通知	RegisteredイベントにSendEmailVerificationNotificationが登録されている。既存Event/Listener構成を利用可能																						
-25	認証	通知ルートの認証	既存routes/web.phpでは認証後ルートをauth middleware groupで管理している。通知ルートも認証必須とする想定																						
-26	ロール制御	既存middleware	EnsureUserRoleによるrole middlewareが既存。通知一覧はstudent/coachを対象とし、adminを対象外とする場合のルート制御方法を要確認																						
-27	利用状態	UserStatus	既存UserモデルでUserStatusをCastしており、利用状態を保持している。通知対象外条件の実装に利用可能																						
-28	コーチ担当範囲	担当資格	既存User::assignedCertifications()およびcoachingCertificationIds()で担当資格を取得できる。通知対象コーチを決定する業務イベント側で利用可能																						
-29	業務イベント	Chat / QA / Meeting	既存Chat、QaThread/QaReply、Meeting等の業務機能が存在するため、通知発火処理を各イベント発生箇所へ組み込む必要がある																						
-30	非同期処理	メールQueue	既存通知・メール実装は存在するが、本チケットではメール配信のキュー非同期化を行わない																						
-31	JSON API	認証なしAPI	本チケットではJSON APIはスコープ外。既存通知ポップオーバーUIは存在するが、S-B-04ではリアルタイムpush/APIを新規提供しない																						
-32	初期データ	通知Seeder/Factory	通知専用のSeeder/Factoryは既存実装にないため、固定通知データ投入用のSeeder等を新規作成する必要がある																						
-33	ページネーション	既存通知画面	index.blade.phpでは$notifications->hasPages()と$notifications->links()を利用しており、ページネーション自体は画面側が対応済み。1ページ件数はController側未実装のため未確定																						
-34	遷移先	通知詳細・業務画面	既存show.blade.phpは通知本文を表示する画面。notification-row.blade.phpは既読化POSTのみで業務画面への遷移処理は未実装のため、S-B-04で設計・実装が必要																						
+【コード確認事項】																									
+No	確認事項	確認内容																							
+1	個人目標の既存実装	EnrollmentGoal関連のModel・Migration・Controller・Action・Request・Policy・Routeが既に存在するか																							
+2	画面の実装状態	提供済みBladeの入力項目・name属性・ルート名・期待する変数																							
+3	Enrollmentの削除処理	SoftDeletesと物理削除のどちらを利用しているか																							
+4	Enrollmentのリレーション	目標用のhasManyリレーションが必要か、既に存在するか																							
+5	受講停止状態	EnrollmentStatusとactive-learningの判定条件																							
+6	認可方式	Policyで親Enrollmentを判定する既存実装の具体的な呼び出し方																							
+7	FormRequestの命名	既存のRequest配置・命名規約																							
+8	Actionの構成	既存CRUDでのAction分割、トランザクション、Exceptionの利用方法																							
+9	テストの配置	Enrollment関連Featureテストの構成と命名規則																							
+10	Seederの構成	固定受講生・デモ受講生のEnrollment生成箇所と関連データの投入方法																							
 																									
-	5. 確定仕様																								
-	区分	確定仕様																							
-	通知一覧	受講生・コーチは自分宛の通知一覧を確認できる																							
-	一覧対象	認証ユーザー本人の通知のみ表示し、他人宛の通知は表示しない																							
-	通知基盤	Laravel標準のDatabase Notificationを利用する																							
-	未読	notifications.read_atがNULLの通知を未読として扱う																							
-	既読	notifications.read_atに日時が設定された通知を既読として扱う																							
-	一覧表示	既存notifications/index.blade.phpを利用し、全件・未読のみを切り替えて表示する																							
-	ページネーション	通知一覧をページ分割して表示する																							
-	個別既読	本人の通知をクリックすると既読化し、関連する業務画面へ遷移する																							
-	一括既読	本人の未読通知をまとめて既読化する																							
-	他人の通知	他人宛の通知の閲覧・既読化を禁止する																							
-	通知発火	対象業務イベント発生時に対象ユーザーへアプリ内通知を作成する																							
-	メール	対象業務イベント発生時に対象ユーザーへメールを送信する																							
-	メール非同期化	メール配信のキュー非同期化は行わない																							
-	通知対象	受講生・コーチを対象とし、管理者向け通知は本MVPでは扱わない																							
-	利用状態	利用状態に応じて通知対象を制御する																							
-	通知種別	通知データにnotification_type等の種別情報を保持し、種別に応じて表示・遷移先を制御する																							
-	通知削除	通知の削除機能は提供せず、既読化のみ提供する																							
-	通知設定	通知種別ごとのON/OFF設定は提供しない																							
-	リアルタイム通知	リアルタイムpush・通知ポップオーバーによる新規通知配信は対象外とする																							
-	管理者一斉配信	管理者によるお知らせ一斉配信は対象外とする																							
-	管理者通知	管理者向け通知は本MVPでは対象外とする																							
-	面談リマインダー	面談リマインダー通知は対象外とする																							
-	モバイル通知	モバイルプッシュ通知は対象外とする																							
-	JSON API	認証なしJSON APIは提供しない																							
-	画面	既存resources/views/notifications/配下の画面を使用し、本チケットでは画面変更を行わない																							
-	通知ルート	GET /notifications、POST /notifications/{notification}/read、POST /notifications/read-allを提供する																							
-	初期データ	固定の受講生・コーチに既読・未読、複数種別の通知を投入し、一覧・ページネーション・通知遷移を確認できる状態とする																							
-	通知メール実装	既存ResetPasswordNotification等のLaravel Notification実装パターンを参考に業務通知を実装する																							
-	認可	通知操作時は本人の通知であることをサーバー側で検証する																							
+【既存コード調査結果】																									
+No	対象	確認内容																							
+1	Enrollmentモデル	既存モデル。個人目標はEnrollment配下で管理する設計が必要																							
+2	Enrollmentテーブル	ULIDのid、user_id、certification_id、exam_date、status、current_term、passed_at等を持つ																							
+3	Enrollmentテーブル	EnrollmentはSoftDeletesを利用している																							
+4	Enrollmentテーブル	user_idとcertification_idはusers・certificationsを参照し、restrictOnDeleteが設定されている																							
+5	EnrollmentPolicy	viewでadmin・本人のstudent・担当資格のcoachを判定する																							
+6	EnrollmentPolicy	担当コーチはcertification.coachesリレーションを利用して判定する																							
+7	LearningHourTargetPolicy	viewはEnrollmentPolicy::viewへ委譲する構成																							
+8	LearningHourTargetPolicy	create・update・deleteはstudentかつEnrollment本人であることを判定する構成																							
+9	AuthServiceProvider	EnrollmentPolicyがEnrollmentに紐づけられている																							
+10	EnrollmentController	showでEnrollmentPolicy::viewによる認可後、受講登録詳細画面を表示する																							
+11	EnrollmentController	詳細画面はenrollment.showを使用している																							
+12	routes/web.php	受講登録一覧・詳細は全ロール共通のauthグループに定義されている																							
+13	routes/web.php	受講生専用の一部ルートにはrole:studentとactive-learningが適用されている																							
+14	画面	受講登録詳細画面に個人目標の一覧・追加フォームを組み込む要件がある。実際のBladeの内容は追加調査が必要																							
+15	個人目標モデル	存在有無は未確定。EnrollmentGoal関連の全体検索が必要																							
+16	個人目標テーブル	存在有無は未確定。既存Migrationの全体検索が必要																							
+17	個人目標Controller	存在有無は未確定																							
+18	個人目標Action	存在有無は未確定																							
+19	個人目標FormRequest	存在有無は未確定																							
+20	個人目標Policy	存在有無は未確定																							
+21	個人目標Route	指定されたPOST・GET・PATCH・DELETEルートの実装状況は未確定																							
+22	個人目標Seeder	存在有無は未確定																							
+23	個人目標Featureテスト	存在有無は未確定																							
+24	既存削除処理	EnrollmentのSoftDeletesを踏まえ、親削除時の目標の物理削除を別途設計する必要がある																							
