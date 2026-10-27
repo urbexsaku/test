@@ -1,0 +1,58 @@
+	S-B-06 設定・プロフィール																								
+	1. 基本設計書																								
+	Route,Controller																								
+	画面名称・動作	HTTPメソッド	パス	ルート先コントローラー	アクション	認証必須	認可	ルート名																	
+	プロフィール設定画面	GET	/settings/profile	Settings/ProfileController	edit	〇	認証ユーザー本人	settings.profile.edit																	
+	プロフィール更新	PATCH	/settings/profile	Settings/ProfileController	update	〇	認証ユーザー本人	settings.profile.update																	
+	アバター登録・変更	POST	/settings/avatar	Settings/AvatarController	store	〇	認証ユーザー本人	settings.avatar.store																	
+	アバター削除	DELETE	/settings/avatar	Settings/AvatarController	destroy	〇	認証ユーザー本人	settings.avatar.destroy																	
+	パスワード変更	PUT	/settings/password	Settings/PasswordController	update	〇	認証ユーザー本人	settings.password.update																	
+																									
+	2. テーブル仕様書																								
+	テーブル名	カラム名	型	PRIMARY KEY	NOT NULL	FOREIGN KEY	備考																		
+	users	id	char(26)	〇	〇		ULID																		
+	users	name	varchar(255)			〇	既存Migrationではnullable。プロフィール更新時は必須・最大50文字とする																		
+	users	email	varchar(255)		〇		一意制約あり。画面表示のみ。本人による変更不可																		
+	users	bio	text				自己紹介。NULL許可																		
+	users	avatar_url	varchar(255)				アバター画像の参照先。NULL許可																		
+	users	role	varchar(255)		〇		ロール。既存Enumで管理。本人による変更不可																		
+	users	status	varchar(255)	〇			既存のデフォルト値はinvited。本人による変更不可																		
+	users	meeting_url	varchar(500)				固定面談URL。NULL許可。コーチのみ更新対象																		
+	users	password	varchar(255)				パスワードハッシュ。既存のパスワード更新処理で更新する																		
+	users	created_at	timestamp				既存の作成日時																		
+	users	updated_at	timestamp				既存の更新日時																		
+	users	deleted_at	timestamp				SoftDeletes用。プロフィール機能で直接更新しない																		
+																									
+	3. バリデーション設計書	コーチ確認済																							
+	ファイル名	フォーム項目	バリデーションルール	rules	attributes	コメント																			
+	Profile/UpdateRequest	authorize	認証ユーザーのみ		-																				
+	Profile/UpdateRequest	name	必須、文字列、最大50文字	required, string, max:50	氏名																				
+	Profile/UpdateRequest	bio	任意、文字列、最大1000文字	nullable, string, max:1000	自己紹介																				
+	Profile/UpdateRequest	meeting_url	任意、文字列、URL形式、最大500文字	nullable, string, url, max:500	固定面談URL	コーチ以外はprohibited																			
+	Avatar/StoreRequest	authorize	認証ユーザーのみ		-																				
+	Avatar/StoreRequest	avatar_url	必須、ファイル、PNG・JPG・JPEG・WebP、最大2MB	required, file, mimes:png,jpg,jpeg,webp, max:2048	画像ファイル																				
+	既存 Fortify: UpdateUserPassword	current_password	必須、文字列、現在のパスワードと一致	required, string, current_password:web	-	カスタムメッセージ：required「現在のパスワードを入力してください。」、current_password「現在のパスワードが正しくありません。」																			
+	既存 Fortify: PasswordValidationRules	password	必須、文字列、既存のパスワードルール、確認用入力と一致	required, string, Password::default(), confirmed	-	カスタムメッセージ：required「新しいパスワードを入力してください。」、min「新しいパスワードは8文字以上で入力してください。」、confirmed「新しいパスワードと確認用パスワードが一致しません。」																			
+																									
+	4. Policy　なし	コーチ確認済																							
+																									
+	5. Action	コーチ確認済																							
+	Action	処理	エラー																						
+	Profile/UpdateAction	ログインユーザー本人の氏名・自己紹介を更新する。面談URLはコーチのみ更新対象とする	バリデーションエラー422																						
+	Avatar/StoreAction	アバター画像をpublicディスクのavatars/配下にULID形式のファイル名で保存し、users.avatar_urlを画像URLに更新する。DB更新成功後、アプリ管理下の旧アバター画像を削除する	バリデーションエラー：422、ストレージ操作・DB更新失敗：AvatarStorageException																						
+	Avatar/DestroyAction	users.avatar_urlをNULLに更新し、DBコミット後にアプリ管理下のアバター画像を削除する	ストレージ削除失敗：ログ出力し、孤立ファイルとして後続の運用・クリーンアップ対象にする																						
+	App\Actions\Fortify\UpdateUserPassword（既存Fortify実装）	現在のパスワードを検証し、新しいパスワードを既存のパスワードルールに従って更新する	バリデーションエラー422																						
+																									
+	6. 画面遷移・メッセージ	コーチ確認済																							
+	機能	アクション	遷移先	成功時のフラッシュメッセージ																					
+	プロフィール	更新	settings.profile.edit　設定画面（プロフィールタブ）	プロフィールを更新しました。																					
+	アイコン画像	登録・更新	settings.profile.edit　設定画面（プロフィールタブ）	アイコン画像を更新しました。																					
+	アイコン画像	削除	settings.profile.edit　設定画面（プロフィールタブ）	アイコン画像を削除しました。																					
+	パスワード	変更	settings.profile.edit　設定画面（パスワードタブ）	パスワードを更新しました。																					
+																									
+	7. シーディング設計書	コーチ確認済																							
+No	初期データ要件	対象データ	設定内容	確認目的	対応方針																				
+1	固定受講生	student@certify-lms.test	role=student、status=in_progress	受講生としてプロフィールの表示・編集を確認	既存データを利用し、avatar_urlに有効なアバター画像URLを設定																				
+2	固定コーチ	coach@certify-lms.test	role=coach、status=in_progress、meeting_url設定済み	コーチとしてプロフィールの表示・編集、面談URLの表示・変更を確認	既存データを利用し、avatar_urlに有効なアバター画像URLを設定																				
+3	管理者	admin@certify-lms.test	role=admin	管理者としてプロフィールの表示・編集を確認	既存データを利用																				
+4	修了済み受講生	既存のgraduated状態の受講生	role=student、status=graduated	修了済み受講生のプロフィール表示・編集を確認	既存データを利用し、ログイン・操作可能な状態かを確認																				
