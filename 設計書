@@ -1,69 +1,58 @@
-	S-B-05 個人学習目標の管理																								
+	S-B-06 設定・プロフィール																								
 	1. 基本設計書																								
 	Route,Controller																								
-	画面名称・動作	HTTPメソッド	パス	ルート先コントローラー	アクション	認証必須	認可																		
-	目標登録	POST	/enrollments/{enrollment}/goals	EnrollmentGoalController	store	〇	受講生本人																		
-	目標編集画面	GET	/enrollment-goals/{goal}/edit	EnrollmentGoalController	edit	〇	受講生本人																		
-	目標更新	PATCH	/enrollment-goals/{goal}	EnrollmentGoalController	update	〇	受講生本人																		
-	目標削除	DELETE	/enrollment-goals/{goal}	EnrollmentGoalController	destroy	〇	受講生本人																		
-	目標達成	POST	/enrollment-goals/{goal}/achieve	EnrollmentGoalController	markAchieved	〇	受講生本人																		
-	目標達成解除	DELETE	/enrollment-goals/{goal}/achieve	EnrollmentGoalController	unmarkAchieved	〇	受講生本人																		
+	画面名称・動作	HTTPメソッド	パス	ルート先コントローラー	アクション	認証必須	認可	ルート名																	
+	プロフィール設定画面	GET	/settings/profile	Settings/ProfileController	edit	〇	認証ユーザー本人	settings.profile.edit																	
+	プロフィール更新	PATCH	/settings/profile	Settings/ProfileController	update	〇	認証ユーザー本人	settings.profile.update																	
+	アバター登録・変更	POST	/settings/avatar	Settings/AvatarController	store	〇	認証ユーザー本人	settings.avatar.store																	
+	アバター削除	DELETE	/settings/avatar	Settings/AvatarController	destroy	〇	認証ユーザー本人	settings.avatar.destroy																	
+	パスワード変更	PUT	/settings/password	Settings/PasswordController	update	〇	認証ユーザー本人	settings.password.update																	
 																									
 	2. テーブル仕様書																								
 	テーブル名	カラム名	型	PRIMARY KEY	NOT NULL	FOREIGN KEY	備考																		
-	enrollment_goals	id	char(26)	〇	〇		ULID																		
-	enrollment_goals	enrollment_id	char(26)		〇	enrollments.id	親の受講登録。親削除時は ON DELETE CASCADE で連動削除																		
-	enrollment_goals	title	varchar(100)		〇		目標タイトル。																		
-	enrollment_goals	description	text																						
-	enrollment_goals	target_date	date				目標期日。																		
-	enrollment_goals	achieved_at	timestamp				達成日時。NULLは未達成																		
-	enrollment_goals	created_at	timestamp																						
-	enrollment_goals	updated_at	timestamp																						
+	users	id	char(26)	〇	〇		ULID																		
+	users	name	varchar(255)			〇	既存Migrationではnullable。プロフィール更新時は必須・最大50文字とする																		
+	users	email	varchar(255)		〇		一意制約あり。画面表示のみ。本人による変更不可																		
+	users	bio	text				自己紹介。NULL許可																		
+	users	avatar_url	varchar(255)				アバター画像の参照先。NULL許可																		
+	users	role	varchar(255)		〇		ロール。既存Enumで管理。本人による変更不可																		
+	users	status	varchar(255)	〇			既存のデフォルト値はinvited。本人による変更不可																		
+	users	meeting_url	varchar(500)				固定面談URL。NULL許可。コーチのみ更新対象																		
+	users	password	varchar(255)				パスワードハッシュ。既存のパスワード更新処理で更新する																		
+	users	created_at	timestamp				既存の作成日時																		
+	users	updated_at	timestamp				既存の更新日時																		
+	users	deleted_at	timestamp				SoftDeletes用。プロフィール機能で直接更新しない																		
 																									
-	3. バリデーション設計書																								
-	ファイル名	フォーム	ルール	rules	attributes																				
-	EnrollmentGoal/StoreRequest	title	必須、文字列、最大100文字	required, string, max:100	目標																				
-	EnrollmentGoal/StoreRequest	description	任意、文字列、最大1000文字	nullable, string, max:1000	詳細																				
-	EnrollmentGoal/StoreRequest	target_date	任意、日付	nullable, date	目標期日																				
-	EnrollmentGoal/UpdateRequest	title	必須、文字列、最大100文字	required, string, max:100	目標																				
-	EnrollmentGoal/UpdateRequest	description	任意、文字列、最大1000文字	nullable, string, max:1000	詳細																				
-	EnrollmentGoal/UpdateRequest	target_date	任意、日付	nullable, date	目標期日																				
+	3. バリデーション設計書	コーチ確認済																							
+	ファイル名	フォーム項目	バリデーションルール	rules	attributes	コメント																			
+	Profile/UpdateRequest	authorize	認証ユーザーのみ		-																				
+	Profile/UpdateRequest	name	必須、文字列、最大50文字	required, string, max:50	氏名																				
+	Profile/UpdateRequest	bio	任意、文字列、最大1000文字	nullable, string, max:1000	自己紹介																				
+	Profile/UpdateRequest	meeting_url	任意、文字列、URL形式、最大500文字	nullable, string, url, max:500	固定面談URL	コーチ以外はprohibited																			
+	Avatar/StoreRequest	authorize	認証ユーザーのみ		-																				
+	Avatar/StoreRequest	avatar_url	必須、ファイル、PNG・JPG・JPEG・WebP、最大2MB	required, file, mimes:png,jpg,jpeg,webp, max:2048	画像ファイル																				
+	既存 Fortify: UpdateUserPassword	current_password	必須、文字列、現在のパスワードと一致	required, string, current_password:web	-	カスタムメッセージ：required「現在のパスワードを入力してください。」、current_password「現在のパスワードが正しくありません。」																			
+	既存 Fortify: PasswordValidationRules	password	必須、文字列、既存のパスワードルール、確認用入力と一致	required, string, Password::default(), confirmed	-	カスタムメッセージ：required「新しいパスワードを入力してください。」、min「新しいパスワードは8文字以上で入力してください。」、confirmed「新しいパスワードと確認用パスワードが一致しません。」																			
 																									
-	4. Policy																								
-	Policy	判定内容																							
-	EnrollmentGoalPolicy	view：EnrollmentPolicy::viewに委譲し、本人・担当コーチ・管理者の閲覧を許可する案																							
-	EnrollmentGoalPolicy	create：studentかつ親Enrollmentの本人のみ許可																							
-	EnrollmentGoalPolicy	update：studentかつ親Enrollmentの本人のみ許可																							
-	EnrollmentGoalPolicy	delete：studentかつ親Enrollmentの本人のみ許可																							
-	EnrollmentGoalPolicy	markAchieved / unmarkAchieved：studentかつ親Enrollmentの本人のみ許可																							
+	4. Policy　なし	コーチ確認済																							
 																									
-	5. Action																								
-	対象	Action	処理	エラー																					
-	Enrollment	ShowAction	Enrollmentに紐づく目標一覧を取得し、未達成の目標を達成済みの目標より先に表示する。目標期日の昇順（期日が近い順）で表示し、目標期日が同じ場合は作成日時の降順（新しい順）で表示する。目標期日が未設定の目標は、期日が設定されている目標より後ろに表示する。	—																					
-	EnrollmentGoal	StoreAction	親Enrollmentに紐づく目標を登録する。入力値を保存する	バリデーションエラー：422																					
-	EnrollmentGoal	UpdateAction	タイトル・詳細・目標期日を更新する	バリデーションエラー：422																					
-	EnrollmentGoal	DestroyAction	対象目標を物理削除する	対象なし：404																					
-	EnrollmentGoal	MarkAchievedAction	対象目標の達成日時を設定する	対象なし：404																					
-	EnrollmentGoal	UnarkAchievedAction	対象目標の達成日時をNULLに戻す	対象なし：404																					
+	5. Action	コーチ確認済																							
+	Action	処理	エラー																						
+	Profile/UpdateAction	ログインユーザー本人の氏名・自己紹介を更新する。面談URLはコーチのみ更新対象とする	バリデーションエラー422																						
+	Avatar/StoreAction	アバター画像をpublicディスクのavatars/配下にULID形式のファイル名で保存し、users.avatar_urlを画像URLに更新する。DB更新成功後、アプリ管理下の旧アバター画像を削除する。旧画像の削除に失敗した場合は警告ログを出力し、新しいアバター画像への更新は成功として扱う。	バリデーションエラー：422。新しい画像の保存失敗時はRuntimeException（「アイコン画像の保存に失敗しました。」）を発生させ、保存・DB更新処理の失敗はAvatarStorageExceptionとして扱う（画面表示：「画像の保存に失敗しました。時間をおいて再度お試しください。」）。旧画像の削除失敗時は警告ログ「旧アイコン画像の削除に失敗しました。」を出力し、孤立ファイルとして後続の運用・クリーンアップ対象にする。																						
+	Avatar/DestroyAction	users.avatar_urlをNULLに更新し、DBコミット後にアプリ管理下のアバター画像を削除する	ストレージ削除失敗：ログ出力し、孤立ファイルとして後続の運用・クリーンアップ対象にする																						
+	App\Actions\Fortify\UpdateUserPassword（既存Fortify実装）	現在のパスワードを検証し、新しいパスワードを既存のパスワードルールに従って更新する	バリデーションエラー422																						
 																									
-	シーディング設計書																								
-	項目	設計方針	備考																						
-	画面確認用データ	固定受講生に5件	画面表示・達成状態・並び順・各操作を確認																						
-	閲覧権限確認用データ	既存のデモ受講生を利用	コーチ・ほかの受講生からの閲覧可否を確認																						
-	管理者の閲覧確認	既存の受講登録データを利用	管理者用の目標データは追加しない																						
-	目標日時	Carbon::today()->addDays(N)	実行日を基準にした日付																						
-	作成日時	now()->subDays(N)	実行日時を基準にした作成日時																						
-	達成日時	達成済みは now()->subDays(2)、未達成は NULL	実行日時を基準に設定																						
+	6. 画面遷移・メッセージ	コーチ確認済																							
+	機能	アクション	遷移先	成功時のフラッシュメッセージ																					
+	プロフィール	更新	settings.profile.edit　設定画面（プロフィールタブ）	プロフィールを更新しました。																					
+	アイコン画像	登録・更新	settings.profile.edit　設定画面（プロフィールタブ）	アイコン画像を更新しました。																					
+	アイコン画像	削除	settings.profile.edit　設定画面（プロフィールタブ）	アイコン画像を削除しました。																					
+	パスワード	変更	settings.profile.edit　設定画面（パスワードタブ）	パスワードを更新しました。																					
 																									
-	固定受講生																								
-No	達成状態	目標期日の設定	作成日時の設定	達成日時の設定	確認内容																				
-1	未達成	Carbon::today()->addDays(7)	now()->subMinutes(40)	NULL	期日が近い未達成目標が先に表示されること																				
-2	未達成	Carbon::today()->addDays(14)	now()->subMinutes(30)	NULL	同一期日の目標のうち、作成日時が古い方																				
-3	未達成	Carbon::today()->addDays(14)	now()->subMinutes(20)	NULL	No.2より先に表示され、作成日時降順になること																				
-4	未達成	NULL	now()->subMinutes(10)	NULL	期日未設定の未達成目標が、期日設定済みの未達成目標より後ろに表示されること																				
-5	達成済み	Carbon::today()->addDays(7)	now()->subMinutes(5)	now()->subDays(2)	達成済みの目標が未達成の目標より後ろに表示されること																				
-																									
-	デモ受講生																								
-	対象受講生	目標件数	確認する利用者	確認内容																					
-1	既存のデモ受講生1	必要な場合のみ1件	担当コーチ	担当する受講生の目標を閲覧できること																					
-2	既存のデモ受講生2	必要な場合のみ1件	別の受講生	他人の目標を閲覧できないこと																					
+	7. シーディング設計書	コーチ確認済																							
+No	初期データ要件	対象データ	設定内容	確認目的	対応方針																				
+1	固定受講生	student@certify-lms.test	role=student、status=in_progress	受講生としてプロフィールの表示・編集を確認	既存データを利用し、avatar_urlに有効なアバター画像URLを設定																				
+2	固定コーチ	coach@certify-lms.test	role=coach、status=in_progress、meeting_url設定済み	コーチとしてプロフィールの表示・編集、面談URLの表示・変更を確認	既存データを利用し、avatar_urlに有効なアバター画像URLを設定																				
+3	管理者	admin@certify-lms.test	role=admin	管理者としてプロフィールの表示・編集を確認	既存データを利用																				
+4	修了済み受講生	既存のgraduated状態の受講生	role=student、status=graduated	修了済み受講生のプロフィール表示・編集を確認	既存データを利用し、ログイン・操作可能な状態かを確認																				
