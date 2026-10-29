@@ -30,7 +30,7 @@
 	Profile/UpdateRequest	bio	任意、文字列、最大1000文字	nullable, string, max:1000	自己紹介																				
 	Profile/UpdateRequest	meeting_url	任意、文字列、URL形式、最大500文字	nullable, string, url, max:500	固定面談URL	コーチ以外はprohibited																			
 	Avatar/StoreRequest	authorize	認証ユーザーのみ		-																				
-	Avatar/StoreRequest	avatar_url	必須、ファイル、PNG・JPG・JPEG・WebP、最大2MB	required, file, mimes:png,jpg,jpeg,webp, max:2048	画像ファイル																				
+	Avatar/StoreRequest	avatar	必須、ファイル、PNG・JPG・JPEG・WebP、最大2MB	required, file, mimes:png,jpg,jpeg,webp, max:2048	画像ファイル																				
 	既存 Fortify: UpdateUserPassword	current_password	必須、文字列、現在のパスワードと一致	required, string, current_password:web	-	カスタムメッセージ：required「現在のパスワードを入力してください。」、current_password「現在のパスワードが正しくありません。」																			
 	既存 Fortify: PasswordValidationRules	password	必須、文字列、既存のパスワードルール、確認用入力と一致	required, string, Password::default(), confirmed	-	カスタムメッセージ：required「新しいパスワードを入力してください。」、min「新しいパスワードは8文字以上で入力してください。」、confirmed「新しいパスワードと確認用パスワードが一致しません。」																			
 																									
@@ -39,7 +39,7 @@
 	5. Action	コーチ確認済																							
 	Action	処理	エラー																						
 	Profile/UpdateAction	ログインユーザー本人の氏名・自己紹介を更新する。面談URLはコーチのみ更新対象とする	バリデーションエラー422																						
-	Avatar/StoreAction	アバター画像をpublicディスクのavatars/配下にULID形式のファイル名で保存し、users.avatar_urlを画像URLに更新する。DB更新成功後、アプリ管理下の旧アバター画像を削除する	バリデーションエラー：422、ストレージ操作・DB更新失敗：AvatarStorageException																						
+	Avatar/StoreAction	アバター画像をpublicディスクのavatars/配下にULID形式のファイル名で保存し、users.avatar_urlを画像URLに更新する。DB更新成功後、アプリ管理下の旧アバター画像を削除する。旧画像の削除に失敗した場合は警告ログを出力し、新しいアバター画像への更新は成功として扱う。	バリデーションエラー：422。新しい画像の保存失敗時はRuntimeException（「アイコン画像の保存に失敗しました。」）を発生させ、保存・DB更新処理の失敗はAvatarStorageExceptionとして扱う（画面表示：「画像の保存に失敗しました。時間をおいて再度お試しください。」）。旧画像の削除失敗時は警告ログ「旧アイコン画像の削除に失敗しました。」を出力し、孤立ファイルとして後続の運用・クリーンアップ対象にする。																						
 	Avatar/DestroyAction	users.avatar_urlをNULLに更新し、DBコミット後にアプリ管理下のアバター画像を削除する	ストレージ削除失敗：ログ出力し、孤立ファイルとして後続の運用・クリーンアップ対象にする																						
 	App\Actions\Fortify\UpdateUserPassword（既存Fortify実装）	現在のパスワードを検証し、新しいパスワードを既存のパスワードルールに従って更新する	バリデーションエラー422																						
 																									
