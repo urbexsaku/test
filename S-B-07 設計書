@@ -10,8 +10,8 @@ S-B-07 受講生メモの管理（コーチ）
 2. テーブル仕様書	コーチ確認済																								
 テーブル名	カラム名	型	PRIMARY KEY	NOT NULL	FOREIGN KEY	備考																			
 enrollment_notes	id	char(26)	〇	〇		ULID。既存ModelのHasUlidsの採用規約に合わせる。																			
-enrollment_notes	enrollment_id	char(26)		〇	enrollments.id	親となる受講登録のID。																			
-enrollment_notes	author_id	char(26)		〇	users.id	メモ作成者のユーザーID。作成後の編集では変更しない。																			
+enrollment_notes	enrollment_id	char(26)		〇	enrollments.id	CascadeOnDelete。親となる受講登録のID。																			
+enrollment_notes	author_id	char(26)		〇	users.id	RestrictOnDelete。メモ作成者のユーザーID。作成後の編集では変更しない。																			
 enrollment_notes	body	text		〇		メモ本文。文字数制限はFormRequestで検証する。																			
 enrollment_notes	created_at	timestamp			メモの作成日時。時系列表示に使用する。																				
 enrollment_notes	updated_at	timestamp			メモの最終更新日時。編集後も作成日時は維持する。																				
