@@ -1,0 +1,54 @@
+S-B-07 受講生メモの管理（コーチ）																									
+1. Route, Controller																									
+画面名称・動作	HTTPメソッド	パス	ルート先コントローラー	アクション	認証必須	認可	ルート名（仮）																		
+受講登録詳細・メモ一覧	GET	/enrollments/{enrollment}	EnrollmentController	show	〇	既存EnrollmentPolicy。studentは本人、coachは担当資格、adminは全件	enrollments.show（既存）																		
+メモ追加	POST	/enrollments/{enrollment}/notes	EnrollmentNoteController	store	〇	担当coachまたはadmin	enrollments.notes.store																		
+メモ編集画面	GET	/enrollment-notes/{note}/edit	EnrollmentNoteController	edit	〇	作成者coachまたはadmin	enrollment-notes.edit																		
+メモ更新	PATCH	/enrollment-notes/{note}	EnrollmentNoteController	update	〇	作成者coachまたはadmin	enrollment-notes.update																		
+メモ削除	DELETE	/enrollment-notes/{note}	EnrollmentNoteController	destroy	〇	作成者coachまたはadmin	enrollment-notes.destroy																		
+																									
+2. テーブル仕様書	コーチ確認済																								
+テーブル名	カラム名	型	PRIMARY KEY	NOT NULL	FOREIGN KEY	備考																			
+enrollment_notes	id	char(26)	〇	〇		ULID。既存ModelのHasUlidsの採用規約に合わせる。																			
+enrollment_notes	enrollment_id	char(26)		〇	enrollments.id	親となる受講登録のID。																			
+enrollment_notes	author_id	char(26)		〇	users.id	メモ作成者のユーザーID。作成後の編集では変更しない。																			
+enrollment_notes	body	text		〇		メモ本文。文字数制限はFormRequestで検証する。																			
+enrollment_notes	created_at	timestamp			メモの作成日時。時系列表示に使用する。																				
+enrollment_notes	updated_at	timestamp			メモの最終更新日時。編集後も作成日時は維持する。																				
+																									
+3. バリデーション設計書																									
+ファイル名	フォーム項目	バリデーションルール	rules	attributes	コメント																				
+EnrollmentNote/StoreRequest	authorize	担当coachまたはadminが操作可能		-	EnrollmentNotePolicyのcreate判定に委譲する。																				
+EnrollmentNote/StoreRequest	body	必須、文字列、最大2000文字	required,string,max:2000	メモ本文																					
+EnrollmentNote/UpdateRequest	authorize	作成者coachまたはadminが操作可能		-	EnrollmentNotePolicyのupdate判定に委譲する。																				
+EnrollmentNote/UpdateRequest	body	必須、文字列、最大2000文字	required,string,max:2000	メモ本文	更新時も追加時と同一の本文制限を適用する。																				
+																									
+4. Policy設計書																									
+Policy	メソッド	対象	許可するユーザー	拒否するユーザー・条件	備考																				
+EnrollmentNotePolicy	viewAny	メモ一覧	Admin、対象Enrollmentを閲覧できる担当Coach	Student、担当外Coach、削除済みEnrollment	Enrollmentの閲覧権限は EnrollmentPolicy::view() に委譲する。	 																			
+EnrollmentNotePolicy	create	メモ作成	Admin、対象Enrollmentの担当Coach	Student、担当外Coach、削除済みEnrollment	対象Enrollmentに対する権限を判定する。																				
+EnrollmentNotePolicy	update	メモ編集・編集画面表示	Admin、メモを作成した担当Coach	Student、作成者以外のCoach、担当外Coach、削除済みEnrollment	Adminは作成者を問わず編集できる。編集画面の表示と更新の両方で使用する。																				
+EnrollmentNotePolicy	delete	メモ削除	Admin、メモを作成した担当Coach	Student、作成者以外のCoach、担当外Coach、削除済みEnrollment	Adminは作成者を問わず削除できる。																				
+																									
+5. Action設計書																									
+Action	処理	入力	成功時の結果	エラー・注意事項																					
+EnrollmentNote/StoreAction	受講登録にメモを新規作成する。ログインユーザーをauthor_idに設定し、本文を保存する。	Enrollment、ログインユーザー、検証済み本文	新規メモを保存し、受講登録詳細画面へリダイレクトする。	バリデーションエラーは422。認可はPolicy・FormRequestで確認する。																					
+EnrollmentNote/UpdateAction	対象メモの本文を更新する。作成者と受講登録の紐づきは変更しない。	EnrollmentNote、検証済み本文	本文を更新し、編集前のcreated_atを維持する。	バリデーションエラーは422。認可はPolicyで確認する。																					
+EnrollmentNote/DestroyAction	対象メモを物理削除する。	EnrollmentNote	対象レコードを削除し、受講登録詳細画面へリダイレクトする。	削除後にメモの履歴を保持しない。認可はPolicyで確認する。	　																				
+																									
+6. シーディング設計書																									
+No	受講生	資格	メモ作成者	確認内容																					
+1	受講生花子	基本情報技術者試験	コーチ太郎	担当コーチ自身が作成したメモの編集・削除																					
+2	受講生花子	TOEIC L&R 800 点コース	コーチ太郎	自分が作成したメモの編集・削除																					
+3	受講生花子	TOEIC L&R 800 点コース	コーチ花子	他コーチが作成したメモの編集・削除制限																					
+4	受講生花子	日商簿記 2 級	コーチ花子	担当外資格に対するコーチ太郎の閲覧拒否																					
+5	受講生(面談残数なし)	基本情報技術者試験	コーチ太郎	別の受講生の受講登録に対するメモ表示																					
+																									
+7. 画面遷移・メッセージ																									
+機能	アクション	遷移先	成功時のフラッシュメッセージ	補足																					
+メモ	追加	enrollments.show（受講登録詳細画面）	メモを追加しました。	追加後は一覧に新規メモを表示する。																					
+メモ	編集画面表示	enrollment-note.edit（メモ編集画面）	なし	作成者本人または管理者のみ表示できる。																					
+メモ	更新	enrollments.show（受講登録詳細画面）	メモを更新しました。	作成日時は変更しない。																					
+メモ	削除	enrollments.show（受講登録詳細画面）	メモを削除しました。	対象メモを物理削除する。																					
+メモ	入力エラー	元のフォーム	なし	既存Bladeのエラー表示に検証結果を渡す。																					
+メモ	認可エラー	403エラーページ	なし	受講生、担当外コーチ、他コーチのメモへの不正操作を拒否する。																					
