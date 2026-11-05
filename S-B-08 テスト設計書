@@ -15,7 +15,7 @@ No.	テストファイル	メソッド名	テスト内容	期待結果	参考に
 14	tests/Unit/Services/AnnouncementRecipientResolverServiceTest.php	test_all_students_target_returns_only_in_progress_students	受講中のStudent、退会済・修了済・招待中のStudent、Coach、Adminを用意し、全受講生指定で配信対象を取得	role=student かつ status=in_progress の受講生のみ取得される	EnrollmentTest のScopeテスト	新規																			
 15	同上	test_certification_target_returns_only_students_learning_certification	指定資格についてLearning・Passed・Failedの受講生を用意	指定資格をLearning中の受講生のみ取得	EnrollmentTest::test_scope_learning_filters_only_learning_status	新規																			
 16	同上	test_user_target_returns_only_specified_in_progress_student	指定ユーザーが受講中／受講終了の場合を確認	指定された受講中のStudentのみ取得	SendNotificationActionTest	新規																			
-17	tests/Unit/Services/AnnouncementDispatchServiceTest.php	test_dispatch_sends_notification_to_each_recipient	複数受信者に通知処理を実行	通知対象条件を満たす受信者にお知らせ通知が送信される	SendNotificationActionTest	新規																			
+17	tests/Unit/Services/AnnouncementDispatchServiceTest.php	test_dispatch_sends_notification_to_recipient	配信先として受け取った受講生1名に通知を送信	指定した受講生に通知が送信され、戻り値として配信件数1が返される	SendNotificationActionTest	新規																			
 18	tests/Feature/UseCases/Announcement/StoreActionTest.php	test_announcement_is_created_and_dispatched	配信対象となる受講中のStudentと、対象外となる退会済・修了済・招待中のStudent、Coach、Adminを用意して配信	対象となる受講中のStudentにのみ通知が送信され、配信件数にも対象外ユーザーは含まれない	SendNotificationActionTest	新規																			
 19	同上	test_announcement_history_is_created_when_recipients_are_empty	対象者0人で配信	件数0で履歴が作成される	既存のActionテストのDB検証パターン	新規																			
 20	tests/Feature/Http/Announcement/IndexTest.php	test_admin_can_view_announcement_history	管理者が履歴一覧を表示	200、履歴が表示される	Notification/IndexTest.php	新規																			
