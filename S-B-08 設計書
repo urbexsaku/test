@@ -18,7 +18,7 @@ announcements	target_type	varchar(20)		〇		配信対象の種別。all_students
 announcements	target_certification_id	char(26)			certifications.id	資格指定時の対象資格ID。それ以外はNULL。RestrictOnDeleteとし、配信履歴に紐づく資格・ユーザーは削除できないようにする																			
 announcements	target_user_id	char(26)			users.id	ユーザー指定時の対象ユーザーID。それ以外はNULL。RestrictOnDeleteとし、配信履歴に紐づく資格・ユーザーは削除できないようにする																			
 announcements	dispatched_count	unsigned integer		〇		配信対象となり、通知処理を行った受講生数。初期値0。																			
-announcements	dispatched_at	timestamp				配信完了日時。																			
+announcements	dispatched_at	timestamp				配信開始時刻																			
 announcements	created_at	timestamp				レコード作成日時。																			
 announcements	updated_at	timestamp				レコード更新日時。																			
 																									
@@ -27,9 +27,9 @@ announcements	updated_at	timestamp				レコード更新日時。
 Announcement/StoreRequest	authorize	管理者が操作可能	-	-	-	AnnouncementPolicyのcreate判定に委譲する。																			
 Announcement/StoreRequest	title	必須、文字列、最大200文字	required,string,max:200	タイトル	-	お知らせのタイトル。																			
 Announcement/StoreRequest	body	必須、文字列、最大5000文字	required,string,max:5000	本文	-	お知らせの本文。																			
-Announcement/StoreRequest	target_type	必須、文字列、指定値のみ	required,string,in:all_students,certification,user	配信対象	-	配信対象は全受講生・資格指定・ユーザー指定のいずれか。																			
-Announcement/StoreRequest	target_certification_id	配信対象が資格指定の場合は必須、存在する資格ID	required_if:target_type,certification,nullable,exists:certifications,id	対象資格	配信対象タイプが「資格指定」の場合、対象資格を選択してください。	target_type=certification の場合のみ必須。																			
-Announcement/StoreRequest	target_user_id	配信対象がユーザー指定の場合は必須、存在するユーザーID	required_if:target_type,user,nullable,exists:users,id	対象受講生	配信対象タイプが「ユーザー指定」の場合、対象受講生を選択してください。	target_type=user の場合のみ必須。																			
+Announcement/StoreRequest	target_type	必須、文字列、指定値のみ	required,string,in:all_students,certification,user	配信対象タイプ	-	配信対象は全受講生・資格指定・ユーザー指定のいずれか。																			
+Announcement/StoreRequest	target_certification_id	配信対象が資格指定の場合は必須、存在する資格ID	required_if:target_type,certification,nullable,exists:certifications,id	配信先資格	配信対象タイプが「資格指定」の場合、配信先資格を選択してください。	target_type=certification の場合のみ必須。																			
+Announcement/StoreRequest	target_user_id	配信対象がユーザー指定の場合は必須、存在するユーザーID	required_if:target_type,user,nullable,exists:users,id	配信先ユーザー	配信対象タイプが「ユーザー指定」の場合、配信先ユーザーを選択してください。	target_type=user の場合のみ必須。																			
 																									
 4. Policy設計書																									
 Policy	メソッド	対象	許可するユーザー	拒否するユーザー・条件	備考																				
@@ -43,7 +43,7 @@ Action / Service	処理	入力	成功時の結果	エラー・注意事項
 Announcement/IndexAction	配信履歴を取得する。	ログインユーザー	配信日時の降順でページネーション付き一覧を返す。	配信者・対象資格・対象ユーザーをEager Loadingする。																					
 Announcement/StoreAction	お知らせを保存し、配信対象を抽出して通知を送信する。	ログインユーザー、検証済みタイトル・本文・配信対象	お知らせ履歴を保存し、対象受講生に通知を送信する。配信件数・配信開始日時を記録する。	配信対象が0人の場合も履歴を作成し、配信件数を0として記録する。同期送信とし、途中失敗時はそれまでの配信結果を保持する。																					
 Announcement/ShowAction	配信履歴の詳細を取得する。	Announcement	対象・配信件数・配信日時・配信者・本文を返す。	対象資格・対象ユーザー・配信者をEager Loadingする。																					
-AnnouncementRecipientResolverService	配信対象となる受講生を抽出する。	配信対象タイプ、資格IDまたはユーザーID	配信対象のUserコレクションを返す。	role=student かつ status=in_progress のユーザーを対象とする。資格指定の場合は、指定資格に EnrollmentStatus::Learning の受講登録が存在するユーザーに限定する。																					
+AnnouncementRecipientResolverService	配信対象となる受講生を抽出する。	配信対象タイプ、資格IDまたはユーザーID	配信対象のUserコレクションを返す。	role=student かつ status=in_progress のユーザーを対象とする。退会済・修了済・招待中の受講生、コーチ、管理者は対象外とする。資格指定の場合は、指定資格に EnrollmentStatus::Learning の受講登録が存在するユーザーに限定する。																					
 AnnouncementDispatchService	対象受講生にお知らせ通知を送信する。	Announcement、対象Userコレクション	各受講生にアプリ内通知とメールを送信し、送信処理を開始した人数を配信履歴に逐次記録する。	既存のLaravel Notification基盤を利用する。同期送信とし、順次処理する。送信処理中に失敗した場合は後続の送信を中止する。失敗した受講生も送信処理を開始していれば件数に含める。																					
 																									
 6. Notification設計書																									
@@ -51,8 +51,8 @@ toDatabase() 通知データ設計
 キー	値	内容																							
 notification_type	admin_announcement	通知種別																							
 announcement_id	AnnouncementのID	元のお知らせを識別するID																							
-title	Announcementのタイトル	通知一覧に表示するタイトル																							
-body	Announcementの本文	通知本文																							
+title	Announcementのタイトル	通知一覧・通知詳細画面に表示するタイトル																							
+body	Announcementの本文	通知詳細画面に表示する本文（全文）																							
 																									
 メッセージ内容																									
 件名	挨拶	本文	アクションボタン	遷移先	署名																				
@@ -67,9 +67,8 @@ body	Announcementの本文	通知本文
 機能	アクション	遷移先	成功時のフラッシュメッセージ	補足																					
 お知らせ配信	一覧表示	admin.announcements.index（配信履歴一覧画面）	なし	配信日時の新しい順に表示する。ページネーションを行う。																					
 お知らせ配信	新規配信画面表示	admin.announcements.create（新規配信画面）	なし	配信対象の資格一覧・受講生一覧を表示する。																					
-お知らせ配信	配信	admin.announcements.show（配信詳細画面）	お知らせを配信しました。	配信後は詳細画面へ遷移する。配信履歴に保存し、配信対象者へ通知する。																					
+お知らせ配信	配信	admin.announcements.show（配信詳細画面）	お知らせを配信しました (○件)。	配信後は詳細画面へ遷移する。配信履歴に保存し、配信対象者へ通知する。																					
 お知らせ配信	入力エラー	admin.announcements.create（新規配信画面）	なし	入力値を保持して元のフォームへ戻り、既存Bladeのエラー表示に検証結果を渡す。																					
-お知らせ配信	配信対象なし	admin.announcements.create（新規配信画面）	なし	対象者が0人の場合は配信せず、配信対象に関するエラーを表示する。※この動作は要件確認が必要。																					
 お知らせ配信	詳細表示	admin.announcements.show（配信詳細画面）	なし	配信内容・配信対象・配信件数・配信日時・配信者を表示する。																					
 お知らせ配信	認可エラー	403エラーページ	なし	管理者以外による管理画面へのアクセスを拒否する。																					
 																									
