@@ -12,15 +12,19 @@ No.	テストファイル	メソッド名	テスト内容	期待結果	参考に
 11	同上	test_validation_fails	DataProviderでタイトル・本文の未入力、上限超過、不正な対象タイプを確認	422、該当フィールドにエラー	Certification/StoreRequestTest::test_validation_fails	新規																			
 12	同上	test_validation_fails_for_target_id	DataProviderで資格ID・ユーザーIDの未指定、存在しないIDを確認	422、該当フィールドにエラー																					
 13	同上	test_authorize_returns_false_for_non_admin	Coach・Studentで登録リクエスト	403 Forbidden	Certification/StoreRequestTest::test_authorize_returns_false_for_non_admin	新規																			
-14	tests/Unit/Services/AnnouncementRecipientResolverServiceTest.php	test_all_students_target_returns_only_in_progress_students	全受講生指定で複数ロール・ステータスを用意	StudentかつInProgressのみ取得	EnrollmentTest のScopeテスト	新規																			
+14	tests/Unit/Services/AnnouncementRecipientResolverServiceTest.php	test_all_students_target_returns_only_in_progress_students	受講中のStudent、退会済・修了済・招待中のStudent、Coach、Adminを用意し、全受講生指定で配信対象を取得	role=student かつ status=in_progress の受講生のみ取得される	EnrollmentTest のScopeテスト	新規																			
 15	同上	test_certification_target_returns_only_students_learning_certification	指定資格についてLearning・Passed・Failedの受講生を用意	指定資格をLearning中の受講生のみ取得	EnrollmentTest::test_scope_learning_filters_only_learning_status	新規																			
 16	同上	test_user_target_returns_only_specified_in_progress_student	指定ユーザーが受講中／受講終了の場合を確認	指定された受講中のStudentのみ取得	SendNotificationActionTest	新規																			
 17	tests/Unit/Services/AnnouncementDispatchServiceTest.php	test_dispatch_sends_notification_to_each_recipient	複数受信者に通知処理を実行	通知対象条件を満たす受信者にお知らせ通知が送信される	SendNotificationActionTest	新規																			
-18	tests/Feature/UseCases/Announcement/StoreActionTest.php	test_announcement_is_created_and_dispatched	配信対象の取得から履歴作成・通知処理まで確認	履歴が作成され、配信件数・日時が保存される	SendNotificationActionTest	新規																			
+18	tests/Feature/UseCases/Announcement/StoreActionTest.php	test_announcement_is_created_and_dispatched	配信対象となる受講中のStudentと、対象外となる退会済・修了済・招待中のStudent、Coach、Adminを用意して配信	対象となる受講中のStudentにのみ通知が送信され、配信件数にも対象外ユーザーは含まれない	SendNotificationActionTest	新規																			
 19	同上	test_announcement_history_is_created_when_recipients_are_empty	対象者0人で配信	件数0で履歴が作成される	既存のActionテストのDB検証パターン	新規																			
 20	tests/Feature/Http/Announcement/IndexTest.php	test_admin_can_view_announcement_history	管理者が履歴一覧を表示	200、履歴が表示される	Notification/IndexTest.php	新規																			
 21	同上	test_announcements_are_ordered_by_dispatched_at_desc	配信日時の異なる履歴を用意	新しい順で表示	Notification/IndexTest.php	新規																			
 22	同上	test_paginates_20_per_page	21件以上の履歴を用意	1ページ20件で表示	Certification/IndexTest.php	新規																			
 23	tests/Feature/Http/Announcement/ShowTest.php	test_admin_can_view_announcement_detail	管理者が履歴詳細を表示	200、対象資格・対象ユーザー・作成者を表示	Notification/MarkAsReadTest.php	新規																			
 24	同上	test_non_admin_cannot_view_announcement_detail	Coach・Studentが詳細URLへアクセス	403 Forbidden	CertificationPolicyTest	新規																			
-25	tests/Feature/Http/Announcement/StoreTest.php	test_admin_can_create_and_dispatch_announcement	管理者が正常な配信リクエスト	履歴作成後、詳細画面へリダイレクト	Invitation/StoreTest.php	新規																			
+25	同上	test_dispatched_announcement_has_no_edit_redispatch_or_cancel_actions	配信済みのお知らせの詳細画面を表示	編集・再配信・取消の操作が提供されていない																					
+26	tests/Feature/Http/Announcement/StoreTest.php	test_admin_can_create_and_dispatch_announcement	管理者が正常な配信リクエスト	履歴作成後、詳細画面へリダイレクト	Invitation/StoreTest.php	新規																			
+27	tests/Feature/Http/Notification/IndexTest.php	test_admin_announcement_notification_is_displayed_in_recipient_list	配信されたお知らせ通知を受信者の通知一覧で確認	受信者の通知一覧にお知らせ通知が表示される																					
+28	tests/Feature/Http/Notification/ShowTest.php	test_recipient_can_view_full_announcement_body	お知らせ通知の受信者が通知詳細を表示	タイトルと本文全文が表示される																					
+29	同上	test_other_user_cannot_view_announcement_notification	別の受講生が他人宛の通知詳細URLにアクセス	403 Forbidden																					
