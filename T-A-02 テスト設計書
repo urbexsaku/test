@@ -1,3 +1,4 @@
+No.	テストファイル	メソッド名	テスト内容	期待結果	参考にした既存テスト	変更区分																			
 1	tests/Feature/UseCases/Meeting/IndexActionTest.php	test_past_filter_returns_only_past_meetings	過去の面談と未来の面談を登録し、pastで取得	本人の過去の面談のみ取得される	MeetingControllerTestの受講生向け一覧テスト	新規																			
 2	同上	test_all_filter_returns_past_and_upcoming_meetings	過去・未来の面談を登録し、allで取得	本人の過去・未来の面談がすべて取得される	MeetingControllerTestの受講生向け一覧テスト	新規																			
 3	同上	test_upcoming_filter_returns_only_upcoming_meetings	過去・未来の面談を登録し、upcomingで取得	本人の未来の面談のみ取得される	MeetingControllerTestの受講生向け一覧テスト	新規																			
@@ -12,7 +13,7 @@
 13	tests/Feature/UseCases/Meeting/StoreActionTest.php	test_creates_meeting_and_consumes_quota	予約可能な受講生・コーチ・時間枠を用意して予約を作成	reservedの面談が作成され、面談回数の消費記録と紐づき、meeting_url_snapshotも保存される	MeetingControllerTestの予約作成テスト、ConsumeQuotaActionTestの正常系テスト	新規																			
 14	同上	test_throws_when_student_has_no_remaining_quota	残面談回数が0の受講生で予約を実行	InsufficientMeetingQuotaExceptionが発生し、面談・消費記録は作成されない	ConsumeQuotaActionTestの残回数不足テスト	新規																			
 15	同上	test_throws_when_slot_is_outside_availability	コーチの予約可能時間枠外を指定して予約	MeetingOutOfAvailabilityExceptionが発生し、面談・消費記録は作成されない	MeetingAvailabilityServiceTestの予約可能時間枠外テスト	新規																			
-16	同上	test_throws_when_no_available_coach_exists	指定時間に予約可能なコーチがいない状態で予約を実行	MeetingNoAvailableCoachExceptionが発生し、面談・消費記録は作成されない	MeetingControllerTestの予約作成テスト	新規																			
+16	同上	test_throws_when_all_coaches_are_already_booked_for_slot	コーチの予約可能時間内だが、担当可能な全コーチに指定時間の予約が入っている状態で予約を実行	MeetingOutOfAvailabilityExceptionが発生し、面談・消費記録は作成されない	MeetingAvailabilityServiceTestの空き枠取得テスト	新規																			
 17	tests/Feature/UseCases/Meeting/CancelActionTest.php	test_throws_when_meeting_is_not_reserved	completedまたはcanceledの面談をキャンセル	MeetingStatusTransitionExceptionが発生し、面談状態・回数返却記録は変更されない	MeetingControllerTestのキャンセルテスト、RefundQuotaActionTestの返却テスト	新規																			
 18	同上	test_throws_when_meeting_has_already_started	開始時刻を過ぎたreservedの面談をキャンセル	MeetingAlreadyStartedExceptionが発生し、面談状態・回数返却記録は変更されない	MeetingControllerTestのキャンセルテスト	新規																			
 19	同上	test_cancels_meeting_and_refunds_quota	開始前のreservedの面談をキャンセル	面談がcanceledになり、キャンセル者・キャンセル日時が記録され、面談回数が返却される	MeetingControllerTestのキャンセルテスト、RefundQuotaActionTestの返却テスト	新規																			
