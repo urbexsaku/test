@@ -1,0 +1,47 @@
+S-B-09 面談リマインダー通知（前日・1時間前）																									
+																									
+項目	アプリ内通知	メール通知																							
+通知タイミング	面談前日・1時間前	面談前日・1時間前																							
+送信先	受講生・担当コーチ	受講生・担当コーチ																							
+件名・タイトル	面談前日リマインド／面談1時間前リマインド	【Certify LMS】面談前日リマインド／面談1時間前リマインド																							
+通知内容	"資格：
+面談内容：
+面談日時："	"資格：
+面談内容：
+面談日時："																							
+面談参加URL	通知データに保持	「面談に参加する」ボタンに設定																							
+クリック時の遷移先	Certify LMSの面談詳細画面（meetings.show）	meeting_url_snapshot のURL																							
+URL未設定時	面談詳細画面へのリンクは維持	参加ボタンを表示しない																							
+																									
+アプリ内通知データ設計																									
+キー	設定値・内容																								
+notification_type	meeting_reminder																								
+meeting_id	対象面談のID																								
+window	eve / one_hour_before																								
+route_params	meeting：対象面談のID																								
+title	通知タイトル																								
+message	資格・面談内容・面談日時																								
+body	通知本文																								
+meeting_url	面談参加URL（meeting_url_snapshot）																								
+																									
+																									
+テスト設計書																									
+No.	テストファイル	メソッド名	テスト内容	期待結果	参考にした既存テスト	変更区分																			
+1	tests/Feature/UseCases/Notification/SendMeetingRemindersActionTest.php	test_sends_eve_reminder_for_tomorrows_reserved_meetings	翌日の予約済み面談に対して前日リマインドを実行	生徒・コーチに前日リマインドが通知される	tests/Feature/UseCases/Meeting/StoreActionTest.php	新規																			
+2	tests/Feature/UseCases/Notification/SendMeetingRemindersActionTest.php	test_eve_reminder_excludes_meetings_outside_tomorrow	当日および翌々日の予約済み面談を含めて前日リマインドを実行	翌日の面談以外には通知されない	tests/Feature/UseCases/Meeting/AutoCompleteMeetingActionTest.php	新規																			
+3	tests/Feature/UseCases/Notification/SendMeetingRemindersActionTest.php	test_eve_reminder_excludes_non_reserved_meetings	翌日のキャンセル済み・完了済み面談を含めて前日リマインドを実行	予約済み以外の面談には通知されない	tests/Feature/UseCases/Meeting/AutoCompleteMeetingActionTest.php	新規																			
+4	tests/Feature/UseCases/Notification/SendMeetingRemindersActionTest.php	test_sends_one_hour_before_reminder_for_meetings_in_five_minute_window	1時間後から1時間5分未満の対象時間帯と、その前後に開始する面談を含めてリマインドを実行	対象時間帯の予約済み面談の生徒・コーチにのみ通知され、対象時間帯の前後の面談には通知されない	tests/Feature/UseCases/Meeting/AutoCompleteMeetingActionTest.php	新規																			
+5	tests/Feature/UseCases/Notification/SendMeetingRemindersActionTest.php	test_one_hour_before_reminder_excludes_non_reserved_meetings	1時間前リマインドの対象時間帯にキャンセル済み・完了済み面談を含めてリマインドを実行	予約済み以外の面談には通知されない	tests/Feature/UseCases/Meeting/AutoCompleteMeetingActionTest.php	新規																			
+6	tests/Feature/UseCases/Notification/SendMeetingRemindersActionTest.php	test_does_not_send_reminders_to_ineligible_users	Invited・Graduated・Withdrawnの生徒とInvitedのコーチを面談の参加者として設定してリマインドを実行	対象外のユーザーにはリマインドが通知されない	tests/Feature/UseCases/Announcement/StoreActionTest.php	新規																			
+7	tests/Feature/UseCases/Notification/SendMeetingRemindersActionTest.php	test_does_not_send_duplicate_reminders_on_sequential_reruns	同じ面談・通知タイミングでActionを連続実行	同じ通知が重複して作成されない	tests/Feature/UseCases/Announcement/StoreActionTest.php	新規																			
+8	tests/Feature/UseCases/Notification/SendMeetingRemindersActionTest.php	test_skips_reminder_when_lock_is_held_by_another_process	対象面談のロックを事前に取得した状態でActionを実行	ロックを取得できない面談には通知が作成されない	該当する既存テストなし	新規																			
+9	tests/Feature/UseCases/Notification/SendMeetingRemindersActionTest.php	test_database_notification_contains_meeting_details_and_route_params	面談リマインドを実行してDB通知の内容を確認	通知種別・面談ID・通知タイミング・遷移先パラメータなどが正しく保存される	tests/Feature/UseCases/Announcement/StoreActionTest.php	新規																			
+10	tests/Feature/UseCases/Notification/SendMeetingRemindersActionTest.php	test_sends_reminder_email_with_meeting_details	面談リマインドのメール通知内容を確認	件名・面談日時・資格名・相談内容などが正しく設定される	tests/Feature/UseCases/Chat/StoreMessageActionTest.php	新規																			
+11	tests/Feature/Commands/SendMeetingRemindersCommandTest.php	test_command_sends_eve_reminders	--window=eveを指定してコマンドを実行	SendMeetingRemindersActionがEveを引数として1回実行され、コマンドが正常終了する	tests/Feature/Commands/AutoCompleteMeetingsCommandTest.php	新規																			
+12	tests/Feature/Commands/SendMeetingRemindersCommandTest.php	test_command_sends_one_hour_before_reminders	--window=one_hour_beforeを指定してコマンドを実行	SendMeetingRemindersActionがOneHourBeforeを引数として1回実行され、コマンドが正常終了する	tests/Feature/Commands/AutoCompleteMeetingsCommandTest.php	新規																			
+13	tests/Feature/Commands/SendMeetingRemindersCommandTest.php	test_command_fails_when_window_option_is_missing	--windowを指定せずにコマンドを実行	エラーメッセージが出力され、コマンドが失敗終了する	tests/Feature/Commands/AutoCompleteMeetingsCommandTest.php	新規																			
+14	tests/Feature/Commands/SendMeetingRemindersCommandTest.php	test_command_fails_when_window_option_is_invalid	不正な--windowの値を指定してコマンドを実行	エラーメッセージが出力され、コマンドが失敗終了する	tests/Feature/Commands/AutoCompleteMeetingsCommandTest.php	新規																			
+15	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_student_meeting_show_for_reminder_notification	生徒が前日または1時間前リマインド通知を既読化	meetings.show にリダイレクトされ、通知が既読になる																					
+16	tests/Feature/Http/Notification/MarkAsReadTest.php	test_mark_as_read_redirects_to_coach_meeting_show_for_reminder_notification	コーチが前日または1時間前リマインド通知を既読化	meetings.show にリダイレクトされ、通知が既読になる																					
+17	tests/Unit/Notifications/NotificationMailTest.php	test_meeting_reminder_email_includes_meeting_url_when_snapshot_exists	面談URLのスナップショットが存在する状態でメール通知を作成	メールに面談URLのアクションリンクが含まれる																					
+18	tests/Unit/Notifications/NotificationMailTest.php	test_meeting_reminder_email_does_not_include_meeting_url_when_snapshot_is_null	面談URLのスナップショットがNULLの状態でメール通知を作成	メールに面談URLのアクションリンクが含まれない																					
