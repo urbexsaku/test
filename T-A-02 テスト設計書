@@ -1,23 +1,39 @@
+Action設計書																									
+Action	処理	入力	成功時の結果	エラー・注意事項																					
+Meeting/IndexAction	受講生の面談一覧を取得する。検索条件に応じて絞り込み、ページネーションする。	ログインユーザー、検索条件	面談一覧と残り予約可能回数を返す。	面談一覧をページネーションして返す。残り予約可能回数は既存のMeetingQuotaServiceで取得する。																					
+Meeting/IndexAsCoachAction	コーチ向けの面談一覧を取得する。検索条件に応じて絞り込み、ページネーションする。	ログインユーザー、検索条件	担当する面談一覧を返す。	既存の絞り込み・表示仕様を維持する。トランザクションは使用しない。																					
+Meeting/ShowAction	対象面談の詳細情報を取得する。	Meeting	面談詳細に必要な関連データを読み込んだMeetingを返す。	認可はController側で行う。トランザクションは使用しない。																					
+Meeting/StoreAction	面談の予約を登録する。空きコーチの選定、予約枠の確認、予約登録、予約回数の消費を行う。	Enrollment、検証済み予約データ（scheduled_at、topic）	面談を登録し、予約回数を消費する。	予約登録と予約回数の消費はトランザクションで管理する。通知の実行予約をトランザクション内で登録し、コミット成功後に担当コーチへ既存のMeetingReservedNotificationを送信する。予約処理がロールバックされた場合は通知しない。																					
+Meeting/CancelAction	対象面談をキャンセルし、予約回数を返却する。	Meeting、キャンセル者（認証ユーザー）	面談をキャンセルし、予約回数を返却する。	キャンセル処理と予約回数の返却はトランザクションで管理する。通知の実行予約をトランザクション内で登録し、コミット成功後にキャンセル者に応じた相手方へ既存のMeetingCanceledNotificationを送信する。キャンセル処理がロールバックされた場合は通知しない。																					
+Meeting/UpsertMemoAction	対象面談のメモを新規登録または更新する。	Meeting、検証済みメモ本文	面談メモを保存する。	既存の登録・更新仕様を維持する。認可はController・FormRequest側で行う。																					
+Meeting/FetchAvailabilityAction	指定日の面談可能枠を取得する。	Enrollment、対象日	面談可能枠の一覧を返す。	既存の取得条件・レスポンス形式を維持する。トランザクションは使用しない。																					
+																									
+テスト設計書																									
 No.	テストファイル	メソッド名	テスト内容	期待結果	参考にした既存テスト	変更区分																			
 1	tests/Feature/UseCases/Meeting/IndexActionTest.php	test_past_filter_returns_only_past_meetings	過去の面談と未来の面談を登録し、pastで取得	本人の過去の面談のみ取得される	MeetingControllerTestの受講生向け一覧テスト	新規																			
 2	同上	test_all_filter_returns_past_and_upcoming_meetings	過去・未来の面談を登録し、allで取得	本人の過去・未来の面談がすべて取得される	MeetingControllerTestの受講生向け一覧テスト	新規																			
 3	同上	test_upcoming_filter_returns_only_upcoming_meetings	過去・未来の面談を登録し、upcomingで取得	本人の未来の面談のみ取得される	MeetingControllerTestの受講生向け一覧テスト	新規																			
-4	同上	test_returns_only_authenticated_students_meetings	複数の受講生の面談を登録し、認証済み受講生を指定して取得	認証済み受講生本人の面談のみ取得される	MeetingControllerTestの受講生向け一覧テスト	新規																			
+4	同上	test_returns_only_meetings_assigned_to_authenticated_coach	複数の受講生の面談を登録し、認証済み受講生を指定して取得	認証済み受講生本人の面談のみ取得される	MeetingControllerTestの受講生向け一覧テスト	新規																			
 5	tests/Feature/UseCases/Meeting/IndexAsCoachActionTest.php	test_upcoming_meetings_are_ordered_by_scheduled_at_ascending	複数の未来の面談を登録してupcomingで取得	担当コーチの未来の面談が開催日時の昇順で取得される	MeetingControllerTestのコーチ向け一覧テスト	新規																			
 6	同上	test_past_filter_returns_only_past_meetings_in_descending_order	過去・未来の面談を登録し、pastで取得	担当コーチの過去の面談のみが開催日時の降順で取得される	MeetingControllerTestのコーチ向け一覧テスト	新規																			
 7	同上	test_all_filter_returns_all_meetings_in_descending_order	過去・未来の面談を登録し、allで取得	担当コーチの過去・未来の面談が開催日時の降順で取得される	MeetingControllerTestのコーチ向け一覧テスト	新規																			
 8	同上	test_student_filter_returns_only_selected_students_meetings	複数の受講生の面談を登録し、studentIdを指定	指定した受講生の面談のみ取得される	MeetingControllerTestのコーチ向け一覧テスト	新規																			
 9	同上	test_enrollment_filter_returns_only_selected_enrollments_meetings	複数の受講情報の面談を登録し、enrollmentIdを指定	指定した受講情報の面談のみ取得される	MeetingControllerTestのコーチ向け一覧テスト	新規																			
 10	同上	test_returns_only_assigned_coachs_meetings	複数のコーチの面談を登録し、認証済みコーチを指定して取得	認証済みコーチが担当する面談のみ取得される	MeetingControllerTestのコーチ向け一覧テスト	新規																			
-12	tests/Feature/UseCases/Meeting/ShowActionTest.php	test_loads_required_relationships	面談を取得し、Actionを実行	enrollment.certification、coach、student、canceledBy、meetingMemoが読み込まれる	MeetingControllerTestの面談詳細テスト	新規																			
-13	tests/Feature/UseCases/Meeting/StoreActionTest.php	test_creates_meeting_and_consumes_quota	予約可能な受講生・コーチ・時間枠を用意して予約を作成	reservedの面談が作成され、面談回数の消費記録と紐づき、meeting_url_snapshotも保存される	MeetingControllerTestの予約作成テスト、ConsumeQuotaActionTestの正常系テスト	新規																			
-14	同上	test_throws_when_student_has_no_remaining_quota	残面談回数が0の受講生で予約を実行	InsufficientMeetingQuotaExceptionが発生し、面談・消費記録は作成されない	ConsumeQuotaActionTestの残回数不足テスト	新規																			
-15	同上	test_throws_when_slot_is_outside_availability	コーチの予約可能時間枠外を指定して予約	MeetingOutOfAvailabilityExceptionが発生し、面談・消費記録は作成されない	MeetingAvailabilityServiceTestの予約可能時間枠外テスト	新規																			
-16	同上	test_throws_when_all_coaches_are_already_booked_for_slot	コーチの予約可能時間内だが、担当可能な全コーチに指定時間の予約が入っている状態で予約を実行	MeetingOutOfAvailabilityExceptionが発生し、面談・消費記録は作成されない	MeetingAvailabilityServiceTestの空き枠取得テスト	新規																			
-17	tests/Feature/UseCases/Meeting/CancelActionTest.php	test_throws_when_meeting_is_not_reserved	completedまたはcanceledの面談をキャンセル	MeetingStatusTransitionExceptionが発生し、面談状態・回数返却記録は変更されない	MeetingControllerTestのキャンセルテスト、RefundQuotaActionTestの返却テスト	新規																			
-18	同上	test_throws_when_meeting_has_already_started	開始時刻を過ぎたreservedの面談をキャンセル	MeetingAlreadyStartedExceptionが発生し、面談状態・回数返却記録は変更されない	MeetingControllerTestのキャンセルテスト	新規																			
-19	同上	test_cancels_meeting_and_refunds_quota	開始前のreservedの面談をキャンセル	面談がcanceledになり、キャンセル者・キャンセル日時が記録され、面談回数が返却される	MeetingControllerTestのキャンセルテスト、RefundQuotaActionTestの返却テスト	新規																			
-20	tests/Feature/UseCases/Meeting/UpsertMemoActionTest.php	test_creates_new_memo	メモが存在しない面談に本文を保存	面談メモが新規作成され、指定した本文が保存される	MeetingControllerTestの面談メモ保存テスト	新規																			
-21	同上	test_updates_existing_memo	既存の面談メモがある面談に対して別の本文を保存	既存メモが更新され、同じ面談に複数のメモが作成されない	MeetingControllerTestの面談メモ保存テスト	新規																			
-22	同上	test_throws_when_meeting_is_canceled	canceledの面談にメモを保存	MeetingStatusTransitionExceptionが発生し、メモは作成・更新されない	MeetingControllerTestの面談メモ保存テスト	新規																			
-23	tests/Feature/UseCases/Meeting/FetchAvailabilityActionTest.php	test_returns_available_slots_and_loads_certification_relationship	certificationが未ロードのEnrollmentを渡してActionを実行	資格に対応した空き枠が返り、certificationリレーションもロードされる	MeetingAvailabilityServiceTestの空き枠取得テスト	新規																			
+11	tests/Feature/UseCases/Meeting/ShowActionTest.php	test_loads_required_relationships	面談を取得し、Actionを実行	enrollment.certification、coach、student、canceledBy、meetingMemoが読み込まれる	MeetingControllerTestの面談詳細テスト	新規																			
+12	tests/Feature/UseCases/Meeting/StoreActionTest.php	test_creates_meeting_and_consumes_quota	予約可能な受講生・コーチ・時間枠を用意して予約を作成	reservedの面談が作成され、面談回数の消費記録と紐づき、meeting_url_snapshotも保存される	MeetingControllerTestの予約作成テスト、ConsumeQuotaActionTestの正常系テスト	新規																			
+13	同上	test_throws_when_student_has_no_remaining_quota	残面談回数が0の受講生で予約を実行	InsufficientMeetingQuotaExceptionが発生し、面談・消費記録は作成されない	ConsumeQuotaActionTestの残回数不足テスト	新規																			
+14	同上	test_throws_when_slot_is_outside_availability	コーチの予約可能時間枠外を指定して予約	MeetingOutOfAvailabilityExceptionが発生し、面談・消費記録は作成されない	MeetingAvailabilityServiceTestの予約可能時間枠外テスト	新規																			
+15	同上	test_throws_when_all_coaches_are_already_booked_for_slot	コーチの予約可能時間内だが、担当可能な全コーチに指定時間の予約が入っている状態で予約を実行	MeetingOutOfAvailabilityExceptionが発生し、面談・消費記録は作成されない	MeetingAvailabilityServiceTestの空き枠取得テスト	新規																			
+16	同上	test_notifies_assigned_coach_when_meeting_is_created	予約可能な受講生・コーチ・時間枠を用意して予約を作成	割り当てられたコーチにMeetingReservedNotificationが送信される	MeetingControllerTestの予約作成テスト	新規																			
+17	同上	test_does_not_notify_when_reservation_fails	残面談回数が0の受講生で予約を実行	InsufficientMeetingQuotaExceptionが発生し、通知は送信されない	StoreActionTestの残回数不足テスト	新規																			
+18	tests/Feature/UseCases/Meeting/CancelActionTest.php	test_throws_when_meeting_is_not_reserved	completedまたはcanceledの面談をキャンセル	MeetingStatusTransitionExceptionが発生し、面談状態・回数返却記録は変更されない	MeetingControllerTestのキャンセルテスト、RefundQuotaActionTestの返却テスト	新規																			
+19	同上	test_throws_when_meeting_has_already_started	開始時刻を過ぎたreservedの面談をキャンセル	MeetingAlreadyStartedExceptionが発生し、面談状態・回数返却記録は変更されない	MeetingControllerTestのキャンセルテスト	新規																			
+20	同上	test_cancels_meeting_and_refunds_quota	開始前のreservedの面談をキャンセル	面談がcanceledになり、キャンセル者・キャンセル日時が記録され、面談回数が返却される	MeetingControllerTestのキャンセルテスト、RefundQuotaActionTestの返却テスト	新規																			
+21	同上	test_notifies_coach_when_student_cancels	受講生が開始前のreservedの面談をキャンセル	担当コーチにMeetingCanceledNotificationが送信される	MeetingControllerTestのキャンセルテスト	新規																			
+22	同上	test_notifies_student_when_coach_cancels	コーチが開始前のreservedの面談をキャンセル	受講生にMeetingCanceledNotificationが送信される	MeetingControllerTestのキャンセルテスト	新規																			
+23	同上	test_does_not_notify_when_cancellation_fails	開始時刻を過ぎたreservedの面談をキャンセル	MeetingAlreadyStartedExceptionが発生し、通知は送信されない	MeetingControllerTestのキャンセルテスト	新規																			
+24	tests/Feature/UseCases/Meeting/UpsertMemoActionTest.php	test_creates_new_memo	メモが存在しない面談に本文を保存	面談メモが新規作成され、指定した本文が保存される	MeetingControllerTestの面談メモ保存テスト	新規																			
+25	同上	test_updates_existing_memo	既存の面談メモがある面談に対して別の本文を保存	既存メモが更新され、同じ面談に複数のメモが作成されない	MeetingControllerTestの面談メモ保存テスト	新規																			
+26	同上	test_throws_when_meeting_is_canceled	canceledの面談にメモを保存	MeetingStatusTransitionExceptionが発生し、メモは作成・更新されない	MeetingControllerTestの面談メモ保存テスト	新規																			
+27	tests/Feature/UseCases/Meeting/FetchAvailabilityActionTest.php	test_returns_available_slots_and_loads_certification_relationship	certificationが未ロードのEnrollmentを渡してActionを実行	資格に対応した空き枠が返り、certificationリレーションもロードされる	MeetingAvailabilityServiceTestの空き枠取得テスト	新規																			
