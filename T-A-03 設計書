@@ -1,0 +1,54 @@
+項目	設計内容																								
+チケットID	T-A-03																								
+Service名	LearningProgressService																								
+配置	app/Services/Learning/LearningProgressService.php																								
+Namespace	App\Services\Learning																								
+目的	学習進捗の集計ロジックを一元管理し、Controller・Action間の重複を解消する																								
+責務	Section / Chapter / Part の完了数・総数・完了率、および資格全体の進捗率の集計																								
+入力	Enrollment または複数 Enrollment																								
+出力	ProgressSummary または Enrollment IDをキーとするSection完了率の配列																								
+依存モデル	Enrollment																								
+依存Enum	ContentStatus																								
+依存DTO	ProgressSummary																								
+データ取得	既存のDBクエリビルダによる集計処理を移管																								
+呼び出し元	EnrollmentController / ShowEnrollmentAction / FetchStudentDashboardAction																								
+公開メソッド	summarize / summarizeSectionCompletionRatios																								
+非公開メソッド	fetchSectionTotals / countCompletedChapters / countCompletedParts / batch集計用内部処理																								
+トランザクション	不要（参照のみ）																								
+キャッシュ	対象外																								
+クエリ最適化	対象外																								
+仕様変更	禁止（既存の集計結果を維持）																								
+																									
+Serviceメソッド設計																									
+No	メソッド名	公開範囲	引数	戻り値	処理概要	呼び出し元																			
+1	summarize	public	Enrollment $enrollment	ProgressSummary	単一Enrollmentの4階層の進捗を集計する	EnrollmentController / ShowEnrollmentAction																			
+2	summarizeSectionCompletionRatios	public	Eloquent Collection $enrollments	array<string,float>	複数EnrollmentのSection完了率を一括集計する	FetchStudentDashboardAction																			
+3	fetchSectionTotals	private	Enrollment $enrollment	object	公開済Sectionの総数・完了数を取得する	summarize																			
+4	countCompletedChapters	private	Enrollment $enrollment	int	配下の公開済Sectionがすべて読了済のChapter数を取得する	summarize																			
+5	countCompletedParts	private	Enrollment $enrollment	int	配下の公開済Sectionがすべて読了済のPart数を取得する	summarize																			
+																									
+集計方法設計																									
+No	集計対象	総数の算出条件	完了数の算出条件	完了率の算出方法	備考																				
+1	Section	公開済Part配下の公開済Chapter配下の公開済Section	該当Enrollmentのsection_progressesが存在するSection	sectionsCompleted / sectionsTotal	小数点以下4桁に丸める																				
+2	Chapter	対象資格の公開済Part配下の公開済Chapter	配下の公開済Sectionが1件以上存在し、すべて読了済	chaptersCompleted / chaptersTotal	Sectionが0件のChapterは完了扱いにしない																				
+3	Part	対象資格の公開済Part	配下の公開済Sectionが1件以上存在し、すべて読了済	partsCompleted / partsTotal	Sectionが0件のPartは完了扱いにしない																				
+4	資格全体	独立した総数は算出しない	独立した完了数は算出しない	Section完了率と同じ値を使用	overallCompletionRatio																				
+5	ダッシュボード	公開済Part・Chapter・Sectionを対象	Enrollmentごとの読了Section数	完了数 / 総数	複数Enrollmentを一括集計																				
+																									
+テスト設計書																									
+No.	テストファイル	メソッド名	テスト内容	期待結果	参考にした既存テスト																				
+1	LearningProgressServiceTest.php	test_returns_zero_summary_when_no_published_contents	公開コンテンツが存在しない場合の集計	Section・Chapter・Partの総数・完了数・完了率がすべて0になる	DashboardControllerTest::test_student_dashboard_renders_resume_card_with_last_viewed_section																				
+2	LearningProgressServiceTest.php	test_calculates_section_completion_summary	公開Sectionの総数・完了数・完了率を集計する	Section総数3、完了数2、完了率0.6667。Chapter・Partの完了状況も正しく反映される	FetchStudentDashboardActionTest::test_resume_card_advances_to_next_unread_section_when_last_is_completed																				
+3	LearningProgressServiceTest.php	test_calculates_chapter_completion_summary	Chapterの完了判定と完了率を集計する	Chapter総数3、完了数1、完了率0.3333。Section・Partの集計も正しい	BrowseControllerTest::buildSectionFor																				
+4	LearningProgressServiceTest.php	test_calculates_part_completion_summary	Partの完了判定と完了率を集計する	Part総数6、完了数5、完了率0.8333。Section・Chapterの集計も正しい	DashboardControllerTest::test_student_dashboard_renders_resume_card_with_last_viewed_section																				
+5	LearningProgressServiceTest.php	test_counts_only_published_sections	Draft Sectionが集計対象に含まれないことを確認する	公開SectionのみがSection総数に含まれる	DashboardControllerTest::test_student_dashboard_renders_resume_card_with_last_viewed_section																				
+6	LearningProgressServiceTest.php	test_counts_only_published_chapters	Draft Chapterが集計対象に含まれないことを確認する	公開ChapterのみがChapter総数に含まれる	FetchStudentDashboardActionTest::test_resume_card_advances_to_next_unread_section_when_last_is_completed																				
+7	LearningProgressServiceTest.php	test_counts_only_published_parts	Draft Partが集計対象に含まれないことを確認する	公開PartのみがPart総数に含まれる	FetchStudentDashboardActionTest::test_resume_card_advances_to_next_unread_section_when_last_is_completed																				
+8	LearningProgressServiceTest.php	test_does_not_count_empty_chapters_as_completed	公開Sectionが存在しないChapterの完了判定	Chapterの完了数に含まれない	DashboardControllerTest::test_student_dashboard_renders_resume_card_with_last_viewed_section																				
+9	LearningProgressServiceTest.php	test_does_not_count_empty_parts_as_completed	公開Sectionが存在しないPartの完了判定	Partの完了数に含まれない	DashboardControllerTest::test_student_dashboard_renders_resume_card_with_last_viewed_section																				
+13	LearningProgressServiceTest.php	test_rounds_ratios_to_four_decimal_places	Sectionを3件作成し、1件を読了済にする	完了率が0.3333となる	FetchStudentDashboardActionTest::test_resume_card_advances_to_next_unread_section_when_last_is_completed																				
+14	LearningProgressServiceTest.php	test_ignores_progress_of_other_enrollments	同一Certificationに複数Enrollmentを作成し、別EnrollmentのみSectionを読了済にする	対象Enrollmentには別Enrollmentの読了状況が反映されない	FetchStudentDashboardActionTest::test_resume_card_advances_to_next_unread_section_when_last_is_completed																				
+15	LearningProgressServiceTest.php	test_returns_empty_array_when_enrollments_are_empty	空のEloquent Collectionを渡す	空配列を返す	FetchStudentDashboardActionTest（Enrollment Collectionの生成・利用方法）																				
+16	LearningProgressServiceTest.php	test_returns_correct_ratios_for_multiple_enrollments	複数Enrollmentを作成し、それぞれ異なるSection読了状況を設定する	各EnrollmentのIDをキーとして、それぞれ正しいSection完了率を返す	FetchStudentDashboardActionTest::test_resume_card_advances_to_next_unread_section_when_last_is_completed																				
+17	LearningProgressServiceTest.php	test_returns_zero_for_enrollment_without_published_sections	公開済Sectionが存在しないEnrollmentを含めて集計する	該当EnrollmentのSection完了率が0.0になる	BrowseControllerTest::buildSectionFor																				
+18	LearningProgressServiceTest.php	test_uses_enrollment_ids_as_string_array_keys	ULID形式のEnrollment IDを持つ複数Enrollmentを集計する	戻り値がEnrollment IDを文字列キーとする連想配列になり、各IDで値を取得できる	FetchStudentDashboardActionTest::test_enrollment_cards_include_only_learning_enrollments																				
