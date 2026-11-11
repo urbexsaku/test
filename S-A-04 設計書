@@ -1,0 +1,95 @@
+S-A-04 修了証 PDF 出力																									
+																									
+1. Route, Controller																									
+画面名称・動作	HTTPメソッド	パス	ルート先コントローラー	アクション	認証必須	認可	ルート名																		
+修了証PDFダウンロード	GET	/certificates/{certificate}/download	CertificateController	download	〇	CertificatePolicyのdownload判定	certificates.download																		
+																									
+2. Policy設計書																									
+Policy	メソッド	対象	許可するユーザー	拒否するユーザー・条件	備考																				
+CertificatePolicy	download	修了証PDFダウンロード	受講生本人（自分の修了証のみ）、担当コーチ（担当資格の修了証のみ）、管理者（全件）	左記の許可条件に該当しないユーザー	受講生はCertificate.user_id、コーチはCertificate.certification_idと担当資格の割当状態、管理者はロールを基準に判定する																				
+																									
+3.  Action・Service設計書																									
+Action / Service	処理	入力	成功時の結果	エラー・注意事項																					
+CertificatePdfGeneratorService（新規）	修了証PDFを生成して保存する	Certificate	PDFファイルをprivateディスクに保存する	mPDFを利用。既存のPDF Bladeテンプレートを使用する。保存に失敗した場合は例外を送出する																					
+Certificate/IssueAction（変更）	修了証レコードの作成とPDF生成を行う	Passed状態のEnrollment	CertificateレコードとPDF実体を作成する	既存の修了状態チェック・二重発行チェックは維持する。PDF生成に失敗した場合は発行処理を失敗させる																					
+Certificate/DownloadAction（新規）	handle	Certificate	PDFのダウンロードレスポンスを返す	privateディスク上のpdf_pathを確認し、存在しない場合は404。PDFの再生成は行わない																					
+CertificatePdfGeneratorService（新規）	generate	Certificate	PDFファイルをprivateディスクに保存する	mPDFと既存のPDF Bladeテンプレートを利用する。保存に失敗した場合は例外を送出する																					
+																									
+4. PDF設計書																									
+項目	表示内容	データ取得元・備考																							
+タイトル	修了証	固定文言																							
+ブランド表示	Certify LMS	固定表示																							
+受講生氏名	受講生の氏名	Certificate.user.name																							
+修了証明文	上記の者は、本資格の所定の課程を修了したことを証する	固定文言																							
+資格名	資格名	Certificate.certification.name																							
+発行日	YYYY年M月D日	Certificate.issued_at																							
+装飾	枠線・ブランドカラー等	既存Bladeのデザインを利用																							
+																									
+																									
+項目	設計内容	備考																							
+生成タイミング	受講生が修了証を受領した直後	Certificate発行処理内で生成																							
+生成ライブラリ	mPDF	既存の依存関係を利用																							
+テンプレート	resources/views/certificates/pdf.blade.php	既存テンプレートを利用																							
+用紙サイズ	A4	既存PDFレイアウトに合わせる																							
+保存先	privateディスク	公開ディレクトリには保存しない																							
+保存パス	certificates/{ULID}.pdf	Certificate.pdf_pathに保存先を保持																							
+ダウンロードファイル名	certificate-{修了証ID}.pdf	要件書に固定指定がない場合の実装案																							
+ファイル不存在時	ダウンロード不可	ダウンロード時の自動生成・再生成は行わない																							
+																									
+																									
+5. 画面遷移・メッセージ																									
+機能	アクション	遷移先	成功時のフラッシュメッセージ	補足																					
+修了証発行	受領ボタン押下	enrollments.show	修了証を発行しました。おめでとうございます！	既存処理を維持																					
+修了証ダウンロード	ダウンロードリンク押下	PDFファイルのダウンロード	なし	ブラウザのダウンロード処理を利用																					
+修了証ダウンロード	未認証アクセス	ログイン画面	なし	auth middleware																					
+修了証ダウンロード	認可エラー	403エラーページ	なし	Policyで拒否																					
+修了証ダウンロード	Certificateが存在しない	404エラーページ	なし	Route Model Binding																					
+修了証ダウンロード	PDFファイルが存在しない	404エラーページ	なし	保存先にファイルがない場合。自動再生成は行わない																					
+																									
+6 Seeder設計書																									
+既存Seederでは、修了済みEnrollmentに対してCertificateレコードを作成しているが、PDF実体の生成処理は存在しない。																									
+Seeder	対象	変更内容	備考																						
+EnrollmentSeeder	受講中ユーザーのPassed Enrollment	Certificate作成後にPDFを生成する	既存の issueCertificate() を変更																						
+CertificateSeeder	graduatedユーザーの過去Enrollment	Certificate作成後にPDFを生成する	既存の issueCertificateForEnrollment() を変更																						
+																									
+S-A-04 修了証PDF テスト設計書																									
+No.	テストファイル	メソッド名	テスト内容	期待結果	参考にした既存テスト	変更区分																			
+1	tests/Feature/Services/CertificatePdfGeneratorServiceTest.php	test_generates_pdf_and_stores_it_on_private_disk	修了証PDFを生成し、private diskに保存されることを確認	pdf_path の場所にPDFファイルが保存され、PDFとして読み取れること	tests/Unit/Services/MeetingAvailabilityServiceTest.php	新規																			
+2	tests/Feature/UseCases/Certificate/IssueActionTest.php	test_issues_certificate_and_generates_pdf_for_passed_enrollment	Passedかつpassed_at設定済みのEnrollmentに対して修了証を発行する	Certificateが1件作成され、PDF実体がprivate diskに保存されること	tests/Feature/UseCases/Enrollment/ReceiveCertificateActionTest.php	新規																			
+3	同上	test_throws_when_enrollment_is_not_passed	LearningまたはFailedのEnrollmentに対して発行を試みる	EnrollmentNotPassedException が発生し、Certificateが作成されないこと	同上	新規																			
+4	同上	test_throws_when_passed_at_is_null	Passedだがpassed_atが未設定のEnrollmentに対して発行を試みる	EnrollmentNotPassedException が発生し、Certificateが作成されないこと	同上	新規																			
+5	同上	test_throws_when_certificate_has_already_been_issued	同一EnrollmentにCertificateが既に存在する状態で再発行を試みる	CertificateAlreadyIssuedException が発生し、Certificateが重複作成されないこと	同上	新規																			
+6	同上	test_rolls_back_certificate_when_pdf_generation_fails	PDF生成サービスが例外を投げる状況で発行処理を実行する	HTTP処理側に例外が伝播し、DBトランザクションがロールバックされCertificateが残らないこと	同上	新規																			
+7	tests/Unit/Policies/CertificatePolicyTest.php	test_admin_can_download_any_certificate	管理者が任意のCertificateをダウンロードできることを確認	担当資格や所有者に関係なく許可されること	tests/Unit/Policies/MockExamPolicyTest.php	新規																			
+8	同上	test_student_can_download_own_certificate	受講生本人が自分のCertificateをダウンロードできることを確認	許可されること	同上	新規																			
+9	同上	test_student_cannot_download_other_students_certificate	他の受講生のCertificateをダウンロードしようとする	拒否されること	同上	新規																			
+10	同上	test_assigned_coach_can_download_certificate	対象資格の担当コーチがCertificateをダウンロードできることを確認	許可されること	tests/Unit/Policies/MockExamPolicyTest.php	新規																			
+11	同上	test_unassigned_coach_cannot_download_certificate	対象資格を担当していないコーチがダウンロードしようとする	拒否されること	同上	新規																			
+12	tests/Feature/UseCases/Certificate/DownloadActionTest.php	test_downloads_existing_pdf_as_attachment_with_certificate_id_filename	保存済みPDFをダウンロードする	HTTPレスポンスがPDFの添付配信となり、ファイル名が certificate-{修了証ID}.pdf であること	tests/Feature/UseCases/Enrollment/ReceiveCertificateActionTest.php	新規																			
+13	同上	test_returns_404_when_pdf_file_does_not_exist	Certificateレコードは存在するが、参照先のPDFファイルが存在しない状態でダウンロードする	404となること	同上	新規																			
+14	tests/Feature/Http/Certificate/CertificateControllerTest.php	test_graduated_student_can_download_own_certificate	卒業済み受講生が本人のCertificateをダウンロードする	active-learning middlewareに阻止されず、ダウンロードできること	tests/Feature/Http/Enrollment/EnrollmentControllerTest.php	新規																			
+15	同上	test_unauthenticated_user_is_redirected_to_login	未ログイン状態でダウンロードURLにアクセスする	ログイン画面へリダイレクトされること	同上	新規																			
+16	同上	test_forbidden_user_cannot_download_certificate	他人のCertificateを受講生がダウンロードしようとする	403となること	同上	新規																			
+17	tests/Feature/UseCases/Enrollment/ReceiveCertificateActionTest.php	test_successfully_issues_certificate_and_records_status_log_when_all_published_exams_passed	既存の修了証受領処理でPDF生成まで行われることを確認	既存のPassed遷移・Certificate発行に加え、PDF実体もprivate diskに保存されること	同ファイル	変更																			
+																									
+実装済みのHTTPステータスコード																									
+発生条件	HTTPステータス	実装箇所・根拠																							
+未認証でダウンロードにアクセス（通常のブラウザアクセス）	ログイン画面へリダイレクト	Authenticate::redirectTo() が route('login') を返す																							
+未認証でJSONリクエスト	401	Authenticate::redirectTo() がJSONの場合 null を返し、Laravel標準処理に委ねる																							
+Certificateレコードが存在しない	404	Route Model Binding																							
+PDFファイルが存在しない	404	DownloadAction の abort_unless($disk->exists(...), 404)																							
+ダウンロード権限がない	403	CertificateController の $this->authorize('download', $certificate)																							
+修了状態ではないEnrollmentに対して発行を要求	409	EnrollmentNotPassedException																							
+同一Enrollmentに対して二重発行を要求	409	CertificateAlreadyIssuedException																							
+受講条件を満たさない状態で修了証受領を要求	409	CompletionNotEligibleException																							
+Learning以外のEnrollmentで修了証受領を要求	409	EnrollmentNotLearningException																							
+PDF生成・保存に失敗	500相当	CertificatePdfGeneratorService で RuntimeException を送出																							
+																									
+																									
+																									
+																									
+仕様確認																									
+No.	関連する仕様	確認分類	確認事項	確認したい内容	確認理由	現時点の設計案	回答																		
+1	PDFダウンロード	ファイル名	ダウンロード時のファイル名	PDFをダウンロードする際のファイル名について、固定で「修了証.pdf」とする想定でよいでしょうか。	要件書では添付形式での配信は指定されていますが、ファイル名は明記されていないため	「修了証.pdf」とする	ファイル名は固定の「修了証.pdf」ではなく、certificate-{修了証ID}.pdf としてください。																		
+2	修了証発行	エラー時の表示	PDF生成・保存失敗時の受講生への表示	PDFの生成または保存に失敗した場合、受講生にはどのような表示を行う想定でしょうか。個別のエラーメッセージを表示する仕様でよいでしょうか。	要件書ではPDF生成・保存失敗時の受講生への表示方法が明記されていないため	発行に失敗したことが分かるメッセージ（例：「修了証の発行に失敗しました。時間をおいて再度お試しください。」）を表示する	"PDFの生成・保存に失敗した場合は、ステータス500のエラーとして扱ってください。
+表示する文言は要件として定めておりませんので、ご判断にお任せします。"																		
