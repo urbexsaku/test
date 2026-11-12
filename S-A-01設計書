@@ -1,0 +1,131 @@
+S-A-01 Google Calendar連携																									
+1. Route・Controller設計書																									
+画面名称・動作	HTTPメソッド	パス	ルート先コントローラー	アクション	認証必須	認可	ルート名																		
+Google Calendar連携開始	GET	/settings/google-calendar/connect	GoogleCalendarController	redirect	〇	コーチ本人のみ	settings.google-calendar.redirect																		
+OAuthコールバック	GET	/settings/google-calendar/callback	GoogleCalendarController	callback	〇	コーチ本人のみ	settings.google-calendar.callback																		
+Google Calendar連携解除	DELETE	/settings/google-calendar	GoogleCalendarController	destroy	〇	コーチ本人のみ	settings.google-calendar.destroy																		
+																									
+2. テーブル設計書																									
+テーブル名	カラム名	型	PRIMARY KEY	NOT NULL	FOREIGN KEY / 制約	備考																			
+google_credentials	id	char(26)	〇	〇		ULID。HasUlids採用																			
+google_credentials	user_id	char(26)		〇	users.id	UNIQUE。1コーチにつき1レコード。ユーザー削除時はCASCADE																			
+google_credentials	google_user_id	varchar(255)		〇		Googleアカウントのユーザー識別子（sub）																			
+google_credentials	access_token	text		〇		Google APIアクセストークン																			
+google_credentials	refresh_token	text				アクセストークン更新用																			
+google_credentials	expires_at	timestamp				アクセストークン有効期限																			
+google_credentials	calendar_id	varchar(255)		〇		primary 固定																			
+google_credentials	connected_at	timestamp				連携日時																			
+google_credentials	created_at / updated_at	timestamp				レコード作成・更新日時																			
+user_id は UNIQUE 制約を設定し、コーチごとに1つの連携情報を保持する。																									
+既存Bladeが $user->googleCredential、connected_at、calendar_id を参照するため、それらに対応するModel・リレーション・カラムを用意する。																									
+																									
+トークンの保存形式・有効期限の更新方法は実装時に既存構成を確認して決定する。																									
+既存テーブル：meetings（追加候補）																									
+テーブル名	カラム名	型	NOT NULL	備考																					
+meetings	google_calendar_event_id	varchar(255)		Google Calendarに作成した予定のイベントID。キャンセル時の削除対象を特定するために使用																					
+																									
+※イベントIDの保存先は仮置き。既存Meetingとの関連付けを維持できる方法として、まずはカラム追加を想定する。																									
+																									
+3. Model・リレーション設計書																									
+Model	リレーション・項目	内容	備考																						
+User	googleCredential	GoogleCredentialとの1対1リレーション	連携した認証情報を取得																						
+GoogleCredential	user	Userとの多対1リレーション	連携したコーチを取得																						
+GoogleCredential	google_user_id	Googleアカウント識別子	OAuthのIDトークンから取得したsub																						
+GoogleCredential	access_token / refresh_token	OAuthトークン	モデルのhidden対象																						
+GoogleCredential	expires_at / connected_at	日時情報	datetime cast																						
+Meeting	google_calendar_event_id	Google CalendarイベントID	予約とGoogle予定を紐付ける																						
+Meeting	meeting_url_snapshot	既存カラムを利用	Google予定への面談URL登録に利用する想定																						
+																									
+4. Action・Service設計書																									
+Action / Service	処理	入力	成功時の結果	エラー・注意事項																					
+GoogleCalendar/RedirectAction	Google OAuth認証画面へリダイレクト	ログイン中のコーチ、redirect_path	Google認証画面へ遷移	stateを生成してセッションに保存。戻り先はアプリ内パスに制限																					
+GoogleCalendar/CallbackAction	OAuthコールバック処理	コーチ、Request	GoogleCredentialを作成または更新	state検証、認証キャンセル、認可コード取得失敗を処理																					
+GoogleCalendar/DestroyAction	Google Calendar連携解除	ログイン中のコーチ	イベントIDと認証情報を削除	Google側の既存イベントは削除しない																					
+GoogleCalendarService	Google Calendar APIとの通信	認証情報・予定情報	OAuth、トークン更新、予定取得・作成・削除	APIエラー時は呼び出し元でフォールバック																					
+MeetingAvailabilityService	予約可能枠を取得	資格・日付	Google予定との重複を除外した空き枠を返す	未連携コーチは従来判定。API失敗時はログ記録して従来判定を継続																					
+Meeting/StoreAction	面談予約確定	Enrollment、予約日時、トピック	Meeting作成・面談回数消費・通知・Google予定登録	Google予定登録はDBコミット後。API失敗でもLMS予約を維持																					
+Meeting/CancelAction	面談キャンセル	Meeting、実行ユーザー	キャンセル・面談回数返却・通知・Google予定削除	Google予定削除はDBコミット後。API失敗でもLMSキャンセルを維持																					
+																									
+※Action名・クラス分割は仮置き。既存のController構成や実装規約に合わせて調整する。																									
+																									
+5. Google Calendar予定設計書																									
+項目	実装内容	備考・確認事項																							
+連携対象	面談を担当するコーチ本人のGoogleアカウント	管理者による代理連携なし																							
+対象カレンダー	Primary Calendar	calendar_id = primary																							
+予定作成タイミング	面談予約確定後	DBコミット後に実行																							
+予定削除タイミング	面談キャンセル確定後	Meetingに紐付くイベントIDを使用																							
+予定の日時	LMSの面談予約日時	終了時刻は開始時刻の60分後																							
+予定のタイトル	Certify LMS 面談	PM確認																							
+予定の説明	面談トピック、固定面談URL	固定面談URLを含めるかPM確認																							
+予定のURL	現状未設定	meeting_url_snapshot を含める想定かPM確認																							
+同期方向	LMSからGoogle Calendarへの一方向	Google側の変更をLMSへ反映しない																							
+イベントID	meetings.google_calendar_event_id	キャンセル時の削除に使用	未連携・APIエラー時																						
+																									
+※Google予定との重複判定は、既存の60分単位の予約枠に対して行う想定。既存の予約処理・キャンセル処理の順序やトランザクション範囲は実装時に整理する。																									
+																									
+6. 面談予約・キャンセル処理設計書																									
+処理	実行内容	Google Calendar連携時	未連携・APIエラー時	補足																					
+空き枠取得	既存のコーチ稼働時間・予約状況から予約可能枠を取得	Google Calendarの予定を取得し、一部でも重複する60分枠を予約不可にする	未連携時は従来の判定を行う。API取得失敗時はGoogleの予定を考慮せず、従来の判定を継続する	Google CalendarのAPIエラーによって空き枠取得を中断しない																					
+面談予約	空き枠の再検証、コーチ決定、Meeting作成、受講枠消費、通知	DBコミット後にGoogle Calendarへ予定を作成し、取得したイベントIDをMeetingに保存する	未連携時はGoogle予定を作成しない。API作成失敗時もLMSの予約・受講枠消費・通知を継続する	API作成失敗時はエラー内容をログに記録する																					
+面談キャンセル	Meetingのキャンセル、受講枠返却、通知	DBコミット後にMeetingに紐付くGoogle Calendarの予定を削除する	イベントIDがない場合はGoogle予定の削除を行わない。API削除失敗時もLMSのキャンセル・受講枠返却・通知を継続する	API削除失敗時はエラー内容をログに記録する。Google Calendarの連携状態は変更しない																					
+																									
+7. 画面遷移・メッセージ設計書																									
+機能	アクション	遷移先	成功・失敗時のメッセージ	補足																					
+Google Calendar連携	連携開始	Google OAuth認証画面	なし	redirect_path をセッションに保存																					
+Google Calendar連携	認証成功	面談設定画面	Googleカレンダーと連携しました。	連携状態・接続日時・カレンダーIDを表示																					
+Google Calendar連携	認証キャンセル	面談設定画面	Googleカレンダーとの連携がキャンセルされました。	未連携状態を維持																					
+Google Calendar連携	認証コード取得失敗	面談設定画面	Googleの認証情報を取得できませんでした。	未連携状態を維持																					
+Google Calendar連携	OAuth state検証失敗	HTTP 400エラー	なし	HTTP 400を返す																					
+Google Calendar連携	refresh token取得失敗	HTTP 400エラー	なし	HTTP 400を返す。未連携状態を維持																					
+Google Calendar連携	その他のトークン交換失敗	面談設定画面	Googleの認証情報を取得できませんでした。	未連携状態を維持																					
+Google Calendar連携	連携解除	面談設定画面	Googleカレンダー連携を解除しました。	Google側の既存予定は削除しない。連携アカウントを切り替えた場合も、切り替え前のアカウントの既存予定は削除しない																					
+面談予約	予約成功	既存の面談画面	既存の予約完了表示	Google予定登録に失敗してもLMS予約・通知は成立する。失敗内容はログに記録する																					
+面談キャンセル	キャンセル成功	既存の面談画面	既存のキャンセル完了表示	Google予定削除に失敗してもLMSキャンセル・通知は成立する。失敗内容はログに記録する																					
+																									
+8. 初期データ設計書																									
+データ	作成方法	用途	備考																						
+未連携コーチ	既存UserSeederの固定コーチを利用	未連携状態・従来の空き枠判定	GoogleCredentialを作成しない																						
+連携済みコーチ	既存UserSeederの固定コーチにGoogleCredentialFactoryで認証情報を作成	連携状態の表示・連携解除の確認	Factoryのトークンはダミーのため実Google API疎通には使用不可																						
+GoogleCredential	GoogleCredentialFactory	初期データ・自動テスト用の連携状態再現	実Google API疎通には有効な認証情報が必要																						
+																									
+9. 未確定事項・PM確認事項																									
+項目	現時点の実装	PMへの確認内容	回答																						
+OAuth認証のキャンセル・失敗時の画面表示	認証キャンセル時は「Google カレンダーとの連携がキャンセルされました。」、認証コード取得失敗時は「Google の認証情報を取得できませんでした。」を表示。OAuth state検証失敗・トークン交換失敗時は例外発生	OAuth state検証失敗時・トークン交換失敗時も面談設定画面へ戻し、「Google カレンダーとの連携に失敗しました。もう一度お試しください。」を表示する仕様でよいか	"OAuth stateの検証に失敗した場合と、リフレッシュトークン（永続トークン）が取得できなかった場合は、400エラーとしてください。
+認証キャンセル時・認証コードを取得できなかった場合・それ以外のトークン交換の失敗時の遷移先と文言は、要件として定めておりません。
+ご判断にお任せします。"																						
+連携・解除の成功時の画面遷移とメッセージ	面談設定画面へ遷移し、連携成功時は「Google カレンダーと連携しました。」、解除成功時は「Google カレンダーとの連携を解除しました。」を表示	現在の画面遷移・メッセージの仕様でよいか	設定画面に戻す点は問題ございませんが、文言は連携成功時「Googleカレンダーと連携しました。」、連携解除成功時「Googleカレンダー連携を解除しました。」としてください。																						
+アカウント切り替え・連携解除時の既存予定	連携解除時はGoogle側の既存予定を削除しない。別アカウントへの再連携時は同じUserのGoogleCredentialを更新	別アカウントへの切り替えや連携解除後も、連携中に作成した面談予定はGoogleカレンダー側に残す仕様でよいか	はい、その認識で問題ございません。																						
+Googleカレンダーへの予定登録内容	固定タイトル「Certify LMS 面談」＋面談トピック。面談URLは未登録	予定の説明欄に面談トピックに加えて、受講者が面談に参加するための固定URL（meeting_url_snapshot）も含める仕様でよいか	はい、その認識で問題ございません。																						
+Googleカレンダー上の予定の空き時間判定	Google FreeBusyの取得結果に基づき、60分枠と一部でも重複する予定を予約不可として扱う	終日予定も予約不可とし、空き時間として扱われる予定は予約可能とする仕様でよいか	"終日予定や空き時間として扱われる予定の扱いは、要件として定めておりません。
+ご判断にお任せします。"																						
+Google APIの予定登録・削除失敗時の通知	予約時の予定登録失敗・キャンセル時の予定削除失敗はいずれもログ記録のみ。LMS側の処理は継続	Googleカレンダーへの予定登録・削除に失敗した場合、コーチや受講者への通知は行わず、システム側で記録するだけの仕様でよいか	"予定の登録・削除に失敗しても予約・キャンセル処理を継続する点は、ご認識のとおりです。
+失敗時にコーチや受講生へ知らせるかどうかは、要件として定めておりません。"																						
+初期データ		連携済みコーチについては、連携状態の表示・連携解除を確認できる初期データを用意するだけでなく、Google Calendarの空き枠反映も確認できるよう、開発・検証用のGoogleアカウントを用意して実際に連携するところまでを想定されていますでしょうか？	初期データでは連携済み・未連携のコーチを用意すれば足り、開発・検証用のGoogleアカウントで実際に連携した状態まで用意する必要はございません。																						
+																									
+10. テスト設計書																									
+No.	テストファイル	メソッド名	テスト内容	期待結果	参考にした既存テスト	変更区分																			
+1	tests/Feature/Http/Settings/GoogleCalendarControllerTest.php	test_google_calendar_routes_require_coach_role	Google Calendar連携の3ルートに対する未ログインユーザーのアクセスを確認する	ログイン画面へリダイレクトされる	tests/Feature/Http/Meeting/MeetingControllerTest.php	新規																			
+2	tests/Feature/Http/Settings/GoogleCalendarControllerTest.php	test_google_calendar_routes_are_forbidden_for_non_coach_users	受講生・管理者がGoogle Calendar連携の3ルートにアクセスする	HTTP 403を返す	tests/Feature/Http/Meeting/MeetingControllerTest.php	新規																			
+3	tests/Feature/UseCases/GoogleCalendar/RedirectActionTest.php	test_redirects_to_google_authorization_url	連携開始時にGoogle OAuth認証URLを生成してリダイレクトする	Google OAuth認証URLへリダイレクトされ、stateがセッションに保存される	既存の各UseCase Actionテスト	新規																			
+4	tests/Feature/UseCases/GoogleCalendar/RedirectActionTest.php	test_stores_safe_redirect_path_in_session	アプリ内のredirect_pathを指定して連携を開始する	指定したアプリ内パスがセッションに保存される	既存の各UseCase Actionテスト	新規																			
+5	tests/Feature/UseCases/GoogleCalendar/RedirectActionTest.php	test_uses_default_redirect_path_for_external_redirect_path	外部URLまたは不正なredirect_pathを指定して連携を開始する	設定画面のパスがセッションに保存される	既存の各UseCase Actionテスト	新規																			
+6	tests/Feature/UseCases/GoogleCalendar/CallbackActionTest.php	test_creates_google_credential_after_successful_callback	正常なOAuthコールバックで認証情報を取得する	GoogleCredentialが作成され、google_user_id・access_token・refresh_token・expires_at・connected_at・calendar_idが保存される	既存の各UseCase Actionテスト	新規																			
+7	tests/Feature/UseCases/GoogleCalendar/CallbackActionTest.php	test_updates_existing_google_credential_after_successful_callback	すでに連携済みのコーチが別のGoogleアカウントで再連携する	既存のGoogleCredentialが更新され、同一コーチのレコードが重複作成されない	既存の各UseCase Actionテスト	新規																			
+8	tests/Feature/UseCases/GoogleCalendar/CallbackActionTest.php	test_aborts_when_oauth_state_is_invalid	OAuth stateが一致しない状態でコールバックする	HTTP 400を返し、GoogleCredentialは作成・更新されない	既存のHTTP Featureテスト	新規																			
+9	tests/Feature/UseCases/GoogleCalendar/CallbackActionTest.php	test_redirects_when_authorization_is_canceled	Google OAuth認証をキャンセルする	設定画面にリダイレクトされ、指定のキャンセルメッセージが表示される	既存の各UseCase Actionテスト	新規																			
+10	tests/Feature/UseCases/GoogleCalendar/CallbackActionTest.php	test_redirects_when_authorization_code_is_missing	認証コードが取得できない状態でコールバックする	設定画面にリダイレクトされ、指定の認証情報取得失敗メッセージが表示される	既存の各UseCase Actionテスト	新規																			
+11	tests/Feature/UseCases/GoogleCalendar/CallbackActionTest.php	test_redirects_when_token_exchange_fails	認証コードのトークン交換処理が例外を返す	設定画面にリダイレクトされ、指定の認証情報取得失敗メッセージが表示され、GoogleCredentialは作成・更新されない	既存の各UseCase Actionテスト	新規																			
+12	tests/Feature/UseCases/GoogleCalendar/CallbackActionTest.php	test_aborts_when_refresh_token_is_missing	トークン交換結果にrefresh_tokenが含まれない	HTTP 400を返し、GoogleCredentialは作成・更新されない	既存の各UseCase Actionテスト	新規																			
+13	tests/Feature/UseCases/GoogleCalendar/DestroyActionTest.php	test_deletes_google_credential_and_local_event_ids	連携済みコーチがGoogle Calendar連携を解除する	GoogleCredentialが削除され、当該コーチのMeetingに保存されたgoogle_calendar_event_idがNULLになる	既存の各UseCase Actionテスト	新規																			
+14	tests/Feature/UseCases/GoogleCalendar/DestroyActionTest.php	test_does_not_delete_other_coaches_event_ids	連携解除したコーチ以外のMeetingを確認する	他のコーチのgoogle_calendar_event_idは変更されない	既存の各UseCase Actionテスト	新規																			
+15	tests/Feature/UseCases/GoogleCalendar/DestroyActionTest.php	test_redirects_with_success_message_when_destroyed	連携解除後のレスポンスを確認する	設定画面にリダイレクトされ、指定の解除成功メッセージが表示される	既存の各UseCase Actionテスト	新規																			
+16	tests/Unit/Services/MeetingAvailabilityServiceTest.php	test_excludes_slots_overlapping_google_calendar_busy_periods	Google Calendarの予定と一部でも重複する60分枠を確認する	重複する枠だけが予約可能枠から除外される	tests/Unit/Services/MeetingAvailabilityServiceTest.php	既存に追加																			
+17	tests/Unit/Services/MeetingAvailabilityServiceTest.php	test_keeps_slots_when_google_calendar_busy_period_does_not_overlap	Google Calendarの予定と面談枠の終了・開始時刻が一致する場合を確認する	時間帯が重複していない枠は予約可能枠として残る	tests/Unit/Services/MeetingAvailabilityServiceTest.php	既存に追加																			
+18	tests/Unit/Services/MeetingAvailabilityServiceTest.php	test_keeps_slots_when_google_calendar_api_fails	Google Calendarの予定取得APIが例外を返す	Googleの予定を考慮せず、LMS側の条件で空き枠を返す。エラーがログに記録される	tests/Unit/Services/MeetingAvailabilityServiceTest.php	既存に追加																			
+19	tests/Unit/Services/MeetingAvailabilityServiceTest.php	test_skips_google_calendar_api_when_coach_is_not_connected	Google Calendar未連携コーチの空き枠を取得する	Google Calendar APIを呼び出さず、従来どおり空き枠を返す	tests/Unit/Services/MeetingAvailabilityServiceTest.php	既存に追加																			
+20	tests/Feature/UseCases/Meeting/StoreActionGoogleCalendarTest.php	test_creates_google_calendar_event_after_meeting_is_committed	Google Calendar連携済みコーチに面談を予約する	DBコミット後にGoogle予定が作成され、取得したイベントIDがMeetingに保存される	tests/Feature/UseCases/Meeting/StoreActionTest.php	新規																			
+21	tests/Feature/UseCases/Meeting/StoreActionGoogleCalendarTest.php	test_does_not_create_google_calendar_event_when_coach_is_not_connected	Google Calendar未連携コーチに面談を予約する	Google Calendar APIを呼び出さず、LMSの予約が成立する	tests/Feature/UseCases/Meeting/StoreActionTest.php	新規																			
+22	tests/Feature/UseCases/Meeting/StoreActionGoogleCalendarTest.php	test_keeps_meeting_when_google_calendar_event_creation_fails	Google予定の作成APIが例外を返す	LMSの面談予約・面談回数消費・既存通知が成立し、エラーがログに記録される	tests/Feature/UseCases/Meeting/StoreActionTest.php	新規																			
+23	tests/Feature/UseCases/Meeting/CancelActionGoogleCalendarTest.php	test_deletes_google_calendar_event_after_meeting_is_canceled	Google Calendar連携済みコーチの面談をキャンセルする	DBコミット後にGoogle予定が削除され、Meetingのgoogle_calendar_event_idがNULLになる	tests/Feature/UseCases/Meeting/CancelActionTest.php	新規																			
+24	tests/Feature/UseCases/Meeting/CancelActionGoogleCalendarTest.php	test_skips_google_calendar_event_deletion_when_event_id_is_missing	Google予定のイベントIDが保存されていない面談をキャンセルする	Google Calendar APIを呼び出さず、LMSのキャンセルが成立する	tests/Feature/UseCases/Meeting/CancelActionTest.php	新規																			
+25	tests/Feature/UseCases/Meeting/CancelActionGoogleCalendarTest.php	test_keeps_cancellation_when_google_calendar_event_deletion_fails	Google予定の削除APIが例外を返す	LMSのキャンセル・面談回数返却・既存通知が成立し、エラーがログに記録される	tests/Feature/UseCases/Meeting/CancelActionTest.php	新規																			
