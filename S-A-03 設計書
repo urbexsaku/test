@@ -1,0 +1,163 @@
+S-A-03 Stripe 連携（追加面談購入）																									
+1. Route・Controller設計																									
+画面名称・動作	HTTPメソッド	パス	ルート先コントローラー	アクション	認証	認可	ルート名																		
+追加面談購入画面表示	GET	/meeting-quota/checkout	MeetingQuotaCheckoutController	index	必須	Student かつ InProgress	meeting-quota.checkout.select																		
+Stripe Checkout Session作成	POST	/meeting-quota/checkout	MeetingQuotaCheckoutController	store	必須	Student かつ InProgress	meeting-quota.checkout.create																		
+決済完了画面表示	GET	/meeting-quota/success	MeetingQuotaCheckoutController	success	必須	購入者本人のみ	meeting-quota.checkout.success																		
+Stripe Webhook受信	POST	/webhooks/stripe	StripeWebhookController	handle	不要	Stripe署名検証	webhooks.stripe																		
+																									
+2. テーブル設計書																									
+新規テーブル：payments																									
+カラム名	型	PRIMARY KEY	NOT NULL	FOREIGN KEY	備考																				
+id	ULID	〇	〇		決済識別子																				
+user_id	ULID		〇	users.id	購入した受講生																				
+meeting_pack_id	ULID			meeting_packs.id	購入対象の面談パック。削除時はNULL																				
+amount	unsignedInteger		〇		購入時点の決済金額（円）。購入後のマスタ変更の影響を受けない																				
+quantity	unsignedSmallInteger		〇		購入時点の面談回数。購入後のマスタ変更の影響を受けない																				
+status	varchar(20)		〇		決済状態。Pending / Completed / Failed																				
+stripe_checkout_session_id	varchar(255)				Stripe Checkout Session ID。UNIQUE。Session発行前はNULL																				
+stripe_payment_intent_id	varchar(255)				Stripe PaymentIntent ID																				
+paid_at	timestamp				決済確定日時																				
+created_at / updated_at	timestamp				レコード作成・更新日時																				
+																									
+テーブル名	カラム名	型	PRIMARY KEY	NOT NULL	FOREIGN KEY	備考																			
+meeting_quota_transactions	related_payment_id	ULID				Paymentとの関連付け。UNIQUE。1つのPaymentに対する購入回数付与履歴の重複登録を防止																			
+																									
+																									
+1つのPaymentに対して購入付与履歴が複数作成されないよう、related_payment_id の一意制約を追加する案とする。																									
+3. Model・リレーション設計書																									
+Model	リレーション・項目	内容	備考																						
+User	payments	Paymentとの1対多	購入履歴を取得																						
+Payment	user	Userとの多対1	購入者を取得																						
+Payment	meetingPack	MeetingPackとの多対1	購入対象パックを取得。購入履歴には現在のパック名を表示																						
+Payment	quotaTransactions	MeetingQuotaTransactionとの1対多	購入に伴う面談回数付与履歴を取得																						
+MeetingPack	payments	Paymentとの1対多	パックごとの購入履歴を取得																						
+MeetingQuotaTransaction	relatedPayment	Paymentとの多対1	購入に紐づく決済情報を取得																						
+																									
+PaymentStatus Enum																									
+値	表示名	内容																							
+Pending	決済待ち	Checkout Session作成後、決済確定前。購入者がCheckout画面でキャンセルして戻った場合も、期限切れ通知を受けるまではPendingのまま保持																							
+Succeeded	決済完了	Stripeで決済が確定した状態																							
+Failed	決済失敗	決済失敗またはCheckout Sessionの期限切れが確認された状態。両者を区別せず管理・表示																							
+Refunded	返金済み	決済後に返金された状態。今回のチケットでは返金処理は対象外																							
+																									
+4. Action・Service設計書																									
+Action / Service	処理	入力	成功時の結果	エラー・注意事項																					
+MeetingQuota/Checkout/IndexAction	購入可能な面談パックを取得する	ログイン中の受講生	公開中の面談パック一覧を返す	Draft / Archivedは購入対象に含めない。既存の表示順で全件表示し、ページネーションは設けない																					
+MeetingQuota/Checkout/CreateCheckoutSessionAction	Paymentレコードを作成し、Stripe Checkout Sessionの生成を依頼する	User、MeetingPack	Stripe Checkout URLを返す	パックが公開中であることを再確認する。購入時点の金額・回数を保存する。Stripe連携は`StripeCheckoutService`に委譲する																					
+MeetingQuota/Checkout/ShowSuccessAction	決済完了画面に必要なPayment情報を取得する	Stripe Session ID、ログイン中のUser	購入内容を返す	購入者本人のPaymentのみ取得可能。ブラウザのリダイレクトだけで決済完了とは判定しない。画面上の案内文は決済状態によって切り替えない																					
+StripeCheckoutService	Stripe Checkout Sessionを生成する	購入金額、商品情報、成功URL、キャンセルURLなど	Stripe Checkout Session情報を返す	Stripe APIとの通信を担当する。決済方法はStripe側の設定に従い、アプリ側でクレジットカードのみに限定しない。キャンセルURLはダッシュボードとする																					
+Payment/CompletePaymentAction	決済完了を確定し、面談回数付与Actionを呼び出す	Payment ID、Stripe Checkout Session ID、PaymentIntent ID	PaymentをCompletedに更新し、購入回数分の取引履歴を作成する	Paymentをロックして状態を確認する。Payment更新と回数付与を同一DBトランザクションで実行する。二重処理を防止する																					
+Payment/FailPaymentAction	決済失敗またはCheckout Session期限切れをPaymentに反映する	Payment ID、Stripe Checkout Session ID	PaymentをFailedに更新する	署名検証済みイベントのみ処理する。CompletedのPaymentをFailedに戻さない。キャンセルURLへのリダイレクトだけではFailedにしない																					
+MeetingQuota/Purchase/GrantPurchasedQuotaAction	購入回数分の面談回数取引履歴を作成する	Payment	MeetingQuotaTransactionを1件作成する	Purchased、購入回数、`related_payment_id`を設定する。同一Paymentによる二重付与を防止する																					
+StripeWebhookService	Webhookの署名を検証し、Stripeイベントを取得する	Webhookリクエスト本文、署名ヘッダー	検証済みStripeイベントを返す	不正な署名の場合は処理しない。Stripe SDKによる署名検証を担当する																					
+																									
+Stripeイベントの扱い																									
+イベント	処理	備考																							
+checkout.session.completed	payment_statusが`paid`の場合に決済確定処理を行う	決済状態を必ず確認する。未払いの場合はこの時点で面談回数を付与しない																							
+checkout.session.async_payment_succeeded	決済確定処理を行う	Stripe側の決済方法設定により非同期決済が利用される場合に対応する																							
+checkout.session.async_payment_failed	PaymentをFailedに更新する	決済失敗として管理する																							
+checkout.session.expired	PaymentをFailedに更新する	購入者がCheckout画面でキャンセルした場合も、期限切れ通知を受けてからFailedにする																							
+その他	受信するが面談回数・Payment状態には影響させない	対象外イベント																							
+																									
+5. 認可設計書	policyなし																								
+対象	操作	認可条件	認可方法・備考																						
+購入画面	viewAny相当	StudentかつInProgress	Middleware（role:student、`active-learning`）で制御。Policyは実装しない																						
+Checkout Session作成	create相当	StudentかつInProgress	Middlewareで受講生・受講中であることを制御。FormRequestでリクエストの妥当性を検証。対象パックの公開状態はAction側で確認。Policyは実装しない																						
+決済完了画面	view相当	StudentかつPaymentの購入者本人	Action側でログインユーザーのIDを条件にPaymentを取得し、他人のPaymentを参照できないようにする。画面表示時点でInProgressであることを追加条件にはしない																						
+Webhook	handle	Stripe署名が正しいこと	ログイン認証・Policyは使用せず、Stripe署名検証でリクエストの正当性を確認する																						
+																									
+6. バリデーション設計書																									
+ファイル名	フォーム項目	バリデーションルール	rules（案）	attributes	コメント																				
+MeetingQuota/Checkout/StoreRequest	authorize	学習中の受講生であること	-	-	既存Middlewareとの役割分担を確認する																				
+MeetingQuota/Checkout/StoreRequest	meeting_pack_id	必須、ULID、存在するMeetingPack	required, ulid, exists:meeting_packs,id	面談パック	既存MeetingPackの主キーはULID。公開状態はAction側でも確認する																				
+MeetingQuota/Checkout/SuccessRequest（必要な場合）	session_id	必須、文字列	required, string, max:255	決済セッション	ログインユーザー本人のPaymentと照合する																				
+Stripe Webhook	Stripe-Signature	署名検証必須	-	-	通常の入力バリデーションではなくWebhook検証処理で行う																				
+																									
+7. 外部API・決済設計書																									
+項目	設計内容	備考																							
+利用API	Stripe Checkout	チケット指定																							
+SDK	stripe/stripe-php	composer.jsonに`^20.1`が導入済み																							
+決済通貨	JPY	既存MeetingPackの`price`は円単位																							
+商品価格	MeetingPack.price	Checkout Session作成時に動的に指定する。税込価格として登録・表示・決済する方針とし、別途税額を加算しない																							
+商品数量	MeetingPack.meeting_count	購入する面談回数。Paymentの`quantity`に購入時点の値を保存																							
+決済方法	Stripe側の設定に従う	アプリ側でクレジットカードのみに固定しない																							
+Checkout Session	Stripe APIで作成	成功URLは決済完了画面、キャンセルURLはダッシュボード																							
+決済結果	Stripe Webhook	ブラウザ遷移ではなくWebhookを正とする																							
+Webhook署名	Stripe-Signature	Webhook Secretで検証																							
+APIキー	config/services.php等	Stripe用設定を追加・確認する																							
+Secret情報	.env	Stripe Secret Key / Webhook Secretを環境変数で管理																							
+エラー	Stripe API通信失敗	Paymentの状態と購入処理を整合させる																							
+ログ	決済処理の成否	APIキー・署名・カード情報等の機密情報を記録しない																							
+																									
+8. 画面遷移・メッセージ設計書																									
+機能	アクション	遷移先	表示メッセージ・表示方法	補足																					
+追加面談購入	購入画面表示	/meeting-quota/checkout	なし	公開中の面談パックを既存の表示順で全件表示。ページネーションなし																					
+追加面談購入	パック選択・購入	Stripe Checkout	なし	Stripeの決済画面へ遷移。決済方法はStripe側の設定に従う																					
+追加面談購入	決済完了後の戻り	/meeting-quota/success	提供済みの決済完了画面に、購入手続き完了の案内と「面談回数は決済確定後に残数へ反映されます」旨を表示	Paymentの状態に応じた文言の出し分けや画面の自動切り替えは行わない。面談回数の付与はWebhookによる決済確定後に行う																					
+追加面談購入	決済キャンセル	ダッシュボード	既存のダッシュボード表示に戻す	キャンセル時点ではPaymentをPendingのまま保持。期限切れ通知を受けた後にFailedへ更新。面談回数は付与しない																					
+追加面談購入	決済失敗・期限切れ	Stripe Checkoutからの戻り先に依存しない	購入履歴では「決済失敗」と表示	決済失敗と期限切れは区別しない。WebhookでFailedに更新し、面談回数は付与しない																					
+面談回数履歴	購入履歴確認	/meeting-quota/history	Paymentの決済状態を表示	Pending / Completed / Failedのすべてを表示。面談パック名は現在の名称、金額・回数は購入時点の値を表示																					
+																									
+9. Seeder設計書																									
+Seeder	既存内容	今回の対応																							
+MeetingPackSeeder	公開中3種類、Draft1種類、Archived1種類の面談パックを登録	既存Seederを利用																							
+DatabaseSeeder	MeetingPackSeederを実行	Payment Seederを追加する																							
+																									
+新規Payment Seeder																									
+項目	設計内容	備考																							
+対象	固定・デモ受講生	既存UserSeeder等のユーザーを利用																							
+決済待ち	PendingのPayment	決済未確定状態の表示確認																							
+決済完了	CompletedのPayment	購入履歴と面談回数加算の確認																							
+決済失敗	FailedのPayment	失敗状態の表示確認。決済失敗・期限切れを区別しない																							
+購入パック	MeetingPack	購入時点の価格・回数をPaymentに保存。面談パック名はスナップショット保存しない																							
+面談回数取引	CompletedのPaymentに対応するPurchased取引	PaymentとQuotaTransactionの整合性を保つ。Pending / Failedには購入付与取引を作成しない																							
+																									
+10. README・動作確認手順																									
+項目	内容																								
+Stripe設定	Secret Key、Webhook Secret等の設定方法																								
+Stripe Checkout	Stripe側で有効化した決済方法を使ってテスト購入する方法																								
+Webhook	Stripe CLI等を利用したWebhook転送・テスト方法																								
+Webhook確認	決済成功イベントの送信とPayment更新確認																								
+Webhook確認	非同期決済を利用する場合の成功・失敗イベントの送信とPayment更新確認																								
+Webhook確認	Checkout Session期限切れイベントの送信とPaymentのFailed更新確認																								
+キャンセル確認	Checkout画面でキャンセルするとダッシュボードへ戻り、PaymentはPendingのまま残ることを確認																								
+面談回数確認	決済確定後に残面談回数・購入履歴へ反映されることを確認																								
+購入履歴確認	Pending / Completed / Failedのすべてが表示され、面談パック名は現在の名称、金額・回数は購入時点の値で表示されることを確認																								
+再送確認	同一Webhookの再送で二重加算されないことを確認																								
+																									
+11. PM確認事項																									
+No.	確認項目	PM回答・確定仕様	設計への反映	設計への反映																					
+1	決済方法	クレジットカードのみに限定せず、Stripeの設定に従う。	決済方法をアプリ側でクレジットカードのみに固定せず、Stripe側の設定に従う。	対象とする決済方法に応じてStripe Checkoutの設定を決定																					
+2	購入履歴の表示対象	決済が完了していない購入記録も購入履歴に表示する。	決済待ち・決済完了・決済失敗の各状態の購入記録を購入履歴に表示する。	購入履歴の表示対象と決済状態の表示方法を決定																					
+3	決済完了後の画面表示	決済確認中と完了で文言を出し分ける必要はない。提供済みの決済完了画面に、残数加算は決済確定後に反映される旨を含めた購入完了の案内を表示する。画面の自動切り替えも不要。	提供済みの決済完了画面を使用し、決済確定後に面談回数が残数へ反映される旨を案内する。Webhookによる決済確定を画面表示の条件にせず、自動更新も実装しない。	決済完了画面の表示・更新方法を決定																					
+4	決済キャンセル時の扱い	キャンセル時の戻り先はダッシュボード。キャンセル時点では購入記録を決済失敗にせず、決済待ちのまま残す。期限切れの通知を受けてから決済失敗に遷移させる。面談回数は付与しない。	StripeのキャンセルURLをダッシュボードに設定する。キャンセル時点ではPaymentを決済待ちのままとし、期限切れ通知を受けた際に決済失敗へ更新する。面談回数は付与しない。	キャンセル後の遷移先、購入履歴への表示、Paymentの状態管理を決定																					
+5	決済失敗・期限切れの扱い	決済失敗と決済期限切れを区別して管理・表示する必要はない。	決済失敗と期限切れは、いずれも決済失敗として管理・表示する。期限切れ通知を受けた場合も同じ決済失敗状態にする。	Paymentの状態管理と購入履歴の表示方法を決定																					
+6	購入後の面談パック名変更	購入履歴に表示する面談パック名は現時点の名称とする。スナップショット保存の対象は決済額と購入回数のみ。	面談パック名は購入時点の値を保存せず、購入履歴では現在のマスタ名称を表示する。決済額・購入回数は購入時点の値を保持する。	購入時点の面談パック名を保存するか、購入履歴での表示方法を決定																					
+7	同じ面談パックの複数回購入	同じ面談パックを複数回購入できる。	同一面談パックの複数回購入を許可し、購入ごとに別の決済として扱う。	同一パックの複数購入を許可する仕様として確定																					
+8	価格の税込・税別表示	要件としては定めていない。判断は実装側に一任。	面談パックに設定された価格を決済金額として扱う方針で確定する。税込・税別の扱いを含め、価格設定と表示に一貫性を持たせる。	価格設定および決済画面の表示方法を決定																					
+9	購入画面の表示順・ページネーション	既存の表示順で公開中の面談パックをすべて表示し、ページネーションを設けない認識で問題ない。	既存の表示順に従って公開中の面談パックをすべて表示し、ページネーションは設けない。	購入画面の表示順とページネーションの有無を確定																					
+10	決済通知の重複による二重付与	1回の決済に対する面談回数の付与は1回のみとする。	同一決済による面談回数の二重付与を防止する。	同一決済による二重付与を防止する仕様として確定																					
+																									
+																									
+																									
+																									
+																									
+																									
+																									
+																									
+12. 既存実装・要件から確認できたこと																									
+対象	確認できた内容	今回の設計への反映																							
+ONBOARDING.md	Controller → FormRequest → Action → Service / Modelの構成。1業務操作につき1 Actionが基本	同じレイヤー構成を採用																							
+MeetingPack	ULID主キー。Draft / Published / Archivedの3状態	Publishedのみ購入対象																							
+MeetingPack	price、meeting_count、stripe_price_idを保持	購入時点のprice・meeting_countをPaymentに保存																							
+MeetingPackSeeder	公開中3種類、Draft1種類、Archived1種類を登録	既存Seederを利用																							
+MeetingQuotaTransaction	purchased がすでにEnumに存在	既存の種別を利用																							
+MeetingQuotaTransaction	related_payment_idがnullableで存在。現状はPaymentの外部キー制約なし	Payment導入時に関連制約を追加する案																							
+MeetingQuotaService	Purchasedのamountを残数集計に含める	Purchased取引を作成すれば既存集計に反映される																							
+面談回数履歴	Paymentが存在する場合に購入パック情報を取得する想定がコードにある	Paymentとのリレーションを実装																							
+購入選択画面	公開中パックを選択してPOSTするフォームが存在	既存Bladeを利用																							
+決済完了画面	購入内容・決済ステータス・反映遅延の案内が存在	既存Bladeを利用																							
+Stripe SDK	stripe/stripe-phpがcomposer.jsonに存在	SDKの再導入は不要																							
+Payment	Payment Model・Migration・決済処理はmainブランチで確認できなかった	新規実装対象																							
+Webhook	/webhooks/stripe のルートは確認できなかった	新規実装対象																							
